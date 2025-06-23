@@ -1,6 +1,6 @@
 {
-  "name": "@instantlyeasy/claude-code-sdk-ts",
-  "version": "0.2.1",
+  "name": "@botanicastudios/claude-code-sdk-ts",
+  "version": "0.2.1-fork",
   "description": "Unofficial TypeScript port of the official Python Claude Code SDK",
   "type": "module",
   "main": "dist/index.js",
@@ -60,10 +60,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/instantlyeasy/claude-code-sdk-ts.git"
+    "url": "git+https://github.com/botanicastudios/claude-code-sdk-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/instantlyeasy/claude-code-sdk-ts/issues"
+    "url": "https://github.com/botanicastudios/claude-code-sdk-ts/issues"
   },
-  "homepage": "https://github.com/instantlyeasy/claude-code-sdk-ts#readme"
+  "homepage": "https://github.com/botanicastudios/claude-code-sdk-ts#readme"
 }
