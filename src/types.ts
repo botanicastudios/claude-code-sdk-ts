@@ -1,40 +1,40 @@
 // Permission modes for Claude Code operations
-export type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions';
+export type PermissionMode = "default" | "acceptEdits" | "bypassPermissions";
 
 // Tool names that can be allowed or denied
 export type ToolName =
-  | 'Read'
-  | 'Write'
-  | 'Edit'
-  | 'Bash'
-  | 'Grep'
-  | 'Glob'
-  | 'LS'
-  | 'MultiEdit'
-  | 'NotebookRead'
-  | 'NotebookEdit'
-  | 'WebFetch'
-  | 'TodoRead'
-  | 'TodoWrite'
-  | 'WebSearch'
-  | 'Task'
-  | 'MCPTool';
+  | "Read"
+  | "Write"
+  | "Edit"
+  | "Bash"
+  | "Grep"
+  | "Glob"
+  | "LS"
+  | "MultiEdit"
+  | "NotebookRead"
+  | "NotebookEdit"
+  | "WebFetch"
+  | "TodoRead"
+  | "TodoWrite"
+  | "WebSearch"
+  | "Task"
+  | "MCPTool";
 
 // Content block types
 export interface TextBlock {
-  type: 'text';
+  type: "text";
   text: string;
 }
 
 export interface ToolUseBlock {
-  type: 'tool_use';
+  type: "tool_use";
   id: string;
   name: string;
   input: Record<string, unknown>;
 }
 
 export interface ToolResultBlock {
-  type: 'tool_result';
+  type: "tool_result";
   tool_use_id: string;
   content: string | Array<TextBlock | unknown>;
   is_error?: boolean;
@@ -44,25 +44,29 @@ export type ContentBlock = TextBlock | ToolUseBlock | ToolResultBlock;
 
 // Message types
 export interface UserMessage {
-  type: 'user';
+  type: "user";
   content: string;
+  session_id?: string;
 }
 
 export interface AssistantMessage {
-  type: 'assistant';
+  type: "assistant";
   content: ContentBlock[];
+  session_id?: string;
 }
 
 export interface SystemMessage {
-  type: 'system';
+  type: "system";
   subtype?: string;
   data?: any;
+  session_id?: string;
 }
 
 export interface ResultMessage {
-  type: 'result';
+  type: "result";
   subtype?: string;
   content: string;
+  session_id?: string;
   usage?: {
     input_tokens?: number;
     output_tokens?: number;
@@ -78,7 +82,11 @@ export interface ResultMessage {
   };
 }
 
-export type Message = UserMessage | AssistantMessage | SystemMessage | ResultMessage;
+export type Message =
+  | UserMessage
+  | AssistantMessage
+  | SystemMessage
+  | ResultMessage;
 
 // MCP server configuration
 export interface MCPServer {
@@ -105,16 +113,17 @@ export interface ClaudeCodeOptions {
   timeout?: number;
   debug?: boolean;
   addDirectories?: string[];
+  sessionId?: string;
 }
 
 // Additional types for internal use
 export interface CLIMessage {
-  type: 'message';
+  type: "message";
   data: Message;
 }
 
 export interface CLIError {
-  type: 'error';
+  type: "error";
   error: {
     message: string;
     code?: string;
@@ -123,7 +132,7 @@ export interface CLIError {
 }
 
 export interface CLIEnd {
-  type: 'end';
+  type: "end";
 }
 
 export type CLIOutput = CLIMessage | CLIError | CLIEnd;
