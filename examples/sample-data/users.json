@@ -1,0 +1,124 @@
+{
+  "users": [
+    {
+      "id": "user_001",
+      "name": "Alice Johnson",
+      "email": "alice.johnson@example.com",
+      "role": "developer",
+      "preferences": {
+        "model": "claude-3-opus-20240229",
+        "temperature": 0.7,
+        "maxTokens": 4096,
+        "tools": ["Read", "Write", "Edit", "Bash", "Grep"]
+      },
+      "projects": [
+        {
+          "id": "proj_001",
+          "name": "Web Dashboard",
+          "language": "typescript",
+          "framework": "react"
+        },
+        {
+          "id": "proj_002", 
+          "name": "API Service",
+          "language": "node.js",
+          "framework": "express"
+        }
+      ],
+      "usage": {
+        "totalQueries": 245,
+        "tokensUsed": 125000,
+        "lastActive": "2024-06-23T10:30:00Z"
+      }
+    },
+    {
+      "id": "user_002",
+      "name": "Bob Chen",
+      "email": "bob.chen@example.com", 
+      "role": "data_scientist",
+      "preferences": {
+        "model": "claude-3-sonnet-20240229",
+        "temperature": 0.3,
+        "maxTokens": 8192,
+        "tools": ["Read", "NotebookRead", "NotebookEdit", "WebFetch", "WebSearch"]
+      },
+      "projects": [
+        {
+          "id": "proj_003",
+          "name": "ML Pipeline",
+          "language": "python",
+          "framework": "pytorch"
+        }
+      ],
+      "usage": {
+        "totalQueries": 89,
+        "tokensUsed": 67000,
+        "lastActive": "2024-06-22T15:45:00Z"
+      }
+    },
+    {
+      "id": "user_003",
+      "name": "Carol Smith",
+      "email": "carol.smith@example.com",
+      "role": "qa_engineer", 
+      "preferences": {
+        "model": "claude-3-haiku-20240307",
+        "temperature": 0.1,
+        "maxTokens": 2048,
+        "tools": ["Read", "Bash", "Grep", "Glob", "Task"]
+      },
+      "projects": [
+        {
+          "id": "proj_004",
+          "name": "Test Automation",
+          "language": "javascript",
+          "framework": "jest"
+        }
+      ],
+      "usage": {
+        "totalQueries": 156,
+        "tokensUsed": 43000,
+        "lastActive": "2024-06-23T09:15:00Z"
+      }
+    }
+  ],
+  "teams": [
+    {
+      "id": "team_001",
+      "name": "Frontend Team",
+      "members": ["user_001", "user_003"],
+      "permissions": {
+        "allowedTools": ["Read", "Write", "Edit", "Grep", "Glob"],
+        "deniedTools": ["Bash"],
+        "permissionMode": "default"
+      }
+    },
+    {
+      "id": "team_002", 
+      "name": "Data Science Team",
+      "members": ["user_002"],
+      "permissions": {
+        "allowedTools": ["Read", "Write", "NotebookRead", "NotebookEdit", "WebFetch", "WebSearch"],
+        "deniedTools": [],
+        "permissionMode": "acceptEdits"
+      }
+    }
+  ],
+  "organizations": [
+    {
+      "id": "org_001",
+      "name": "TechCorp Inc",
+      "subscription": "enterprise",
+      "limits": {
+        "monthlyTokens": 1000000,
+        "maxConcurrentSessions": 50,
+        "retentionDays": 90
+      },
+      "settings": {
+        "defaultModel": "claude-3-opus-20240229",
+        "loggingEnabled": true,
+        "auditTrail": true
+      }
+    }
+  ]
+}
