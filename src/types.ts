@@ -109,6 +109,7 @@ export interface ClaudeCodeOptions {
   timeout?: number;
   debug?: boolean;
   sessionId?: string;
+  keepAlive?: boolean;
 }
 
 // Additional types for internal use

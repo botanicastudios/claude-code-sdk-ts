@@ -15,11 +15,18 @@ export class SubprocessCLITransport {
   private connectTimeout?: NodeJS.Timeout;
   private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
   private streamingMode: boolean = false; // Track if we need streaming input capability
+  private keepAlive: boolean = false; // Track if we should keep process alive across request-response cycles
 
-  constructor(prompt: string, options: ClaudeCodeOptions = {}, streamingMode: boolean = false) {
+  constructor(
+    prompt: string,
+    options: ClaudeCodeOptions = {},
+    streamingMode: boolean = false,
+    keepAlive: boolean = false
+  ) {
     this.prompt = prompt;
     this.options = options;
     this.streamingMode = streamingMode;
+    this.keepAlive = keepAlive;
   }
 
   /**
@@ -274,8 +281,18 @@ export class SubprocessCLITransport {
               content: [{ type: 'text', text: this.prompt }]
             }
           };
+
+          if (this.options.debug) {
+            console.error('DEBUG: [Transport] Sending initial JSONL message in streaming mode', {
+              streamingMode: this.streamingMode,
+              keepAlive: this.keepAlive,
+              willKeepStdinOpen: this.keepAlive ? 'indefinitely until end()' : 'until result message received'
+            });
+          }
+
           this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
-          // Keep stdin open for additional streaming input
+          // Keep stdin open for potential streaming input and for keepAlive behavior
+          // stdin will be closed when we receive a result message (if keepAlive=false) or explicitly via end()
         } else {
           // For simple queries, send as plain text and close stdin
           this.process.stdin.write(this.prompt + '\n');
@@ -346,6 +363,21 @@ export class SubprocessCLITransport {
 
         try {
           const parsed = JSON.parse(trimmedLine) as CLIOutput;
+
+          // For non-keepAlive mode, close stdin when we receive a result message
+          // This allows the CLI process to exit gracefully after completing the response
+          if (
+            !this.keepAlive &&
+            (parsed as any).type === 'result' &&
+            this.process?.stdin &&
+            !this.process.stdin.destroyed
+          ) {
+            if (this.options.debug) {
+              console.error('DEBUG: [Transport] Received result message, closing stdin for non-keepAlive mode');
+            }
+            this.process.stdin.end();
+          }
+
           yield parsed;
         } catch (error) {
           // Skip non-JSON lines (like Python SDK does)
