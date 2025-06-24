@@ -1,0 +1,152 @@
+{
+  "users": [
+    {
+      "id": "usr_001",
+      "name": "Alice Johnson",
+      "email": "alice@example.com",
+      "preferences": {
+        "model": "claude-3-opus-20240229",
+        "temperature": 0.7,
+        "maxTokens": 4096,
+        "timeout": 30000
+      },
+      "sessions": [
+        {
+          "id": "ses_001_001",
+          "created": "2024-01-15T10:30:00Z",
+          "status": "active",
+          "messageCount": 12
+        },
+        {
+          "id": "ses_001_002", 
+          "created": "2024-01-14T15:45:00Z",
+          "status": "completed",
+          "messageCount": 8
+        }
+      ],
+      "usage": {
+        "totalTokens": 45230,
+        "totalSessions": 15,
+        "averageSessionLength": 9.2
+      }
+    },
+    {
+      "id": "usr_002",
+      "name": "Bob Smith",
+      "email": "bob@example.com", 
+      "preferences": {
+        "model": "claude-3-haiku-20240307",
+        "temperature": 0.3,
+        "maxTokens": 2048,
+        "timeout": 15000
+      },
+      "sessions": [
+        {
+          "id": "ses_002_001",
+          "created": "2024-01-16T09:15:00Z",
+          "status": "active",
+          "messageCount": 5
+        }
+      ],
+      "usage": {
+        "totalTokens": 12450,
+        "totalSessions": 3,
+        "averageSessionLength": 4.1
+      }
+    },
+    {
+      "id": "usr_003", 
+      "name": "Carol Davis",
+      "email": "carol@example.com",
+      "preferences": {
+        "model": "claude-3-sonnet-20240229",
+        "temperature": 0.5,
+        "maxTokens": 8192,
+        "timeout": 45000,
+        "allowedTools": ["Read", "Write", "Grep", "Glob"],
+        "permissionMode": "acceptEdits"
+      },
+      "sessions": [
+        {
+          "id": "ses_003_001",
+          "created": "2024-01-16T14:20:00Z", 
+          "status": "completed",
+          "messageCount": 25
+        },
+        {
+          "id": "ses_003_002",
+          "created": "2024-01-16T16:30:00Z",
+          "status": "active", 
+          "messageCount": 7
+        }
+      ],
+      "usage": {
+        "totalTokens": 89340,
+        "totalSessions": 8,
+        "averageSessionLength": 15.8
+      }
+    }
+  ],
+  "sampleMessages": [
+    {
+      "type": "user",
+      "content": "Help me analyze this JavaScript code for potential security vulnerabilities",
+      "session_id": "ses_001_001"
+    },
+    {
+      "type": "assistant",
+      "content": [
+        {
+          "type": "text",
+          "text": "I'll help you analyze the JavaScript code for security vulnerabilities. Let me examine the code structure first."
+        },
+        {
+          "type": "tool_use",
+          "id": "tool_001",
+          "name": "Read",
+          "input": {
+            "file_path": "/path/to/code.js"
+          }
+        }
+      ],
+      "session_id": "ses_001_001"
+    },
+    {
+      "type": "user",
+      "content": "Create a simple todo application using React",
+      "session_id": "ses_002_001"
+    },
+    {
+      "type": "user",
+      "content": "Refactor this function to be more readable and add proper error handling",
+      "session_id": "ses_003_001"
+    }
+  ],
+  "sampleOptions": [
+    {
+      "model": "claude-3-opus-20240229",
+      "temperature": 0.7,
+      "maxTokens": 4096,
+      "tools": ["Read", "Write", "Edit", "Bash"],
+      "permissionMode": "default",
+      "sessionId": "ses_001_001"
+    },
+    {
+      "model": "claude-3-haiku-20240307", 
+      "temperature": 0.3,
+      "maxTokens": 2048,
+      "allowedTools": ["Read", "Grep", "Glob"],
+      "timeout": 15000,
+      "sessionId": "ses_002_001"
+    },
+    {
+      "model": "claude-3-sonnet-20240229",
+      "temperature": 0.5,
+      "maxTokens": 8192,
+      "deniedTools": ["Bash", "WebSearch"],
+      "permissionMode": "acceptEdits",
+      "context": ["./README.md", "./package.json"],
+      "sessionId": "ses_003_002"
+    }
+  ]
+}

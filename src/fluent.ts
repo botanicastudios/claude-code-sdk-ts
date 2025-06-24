@@ -2,6 +2,7 @@ import { query as baseQuery } from './index.js';
 import type { ClaudeCodeOptions, Message, ToolName, PermissionMode } from './types.js';
 import { ResponseParser } from './parser.js';
 import { Logger } from './logger.js';
+import { Conversation } from './conversation.js';
 
 /**
  * Fluent API for building Claude Code queries with chainable methods
@@ -172,6 +173,14 @@ export class QueryBuilder {
   }
 
   /**
+   * Create a new evolving conversation with streaming input capability
+   * Uses current QueryBuilder options (including any sessionId from withSessionId())
+   */
+  asConversation(): Conversation {
+    return new Conversation(this.options, this.logger);
+  }
+
+  /**
    * Execute query and return raw async generator (for backward compatibility)
    */
   async *queryRaw(prompt: string): AsyncGenerator<Message> {
@@ -221,3 +230,4 @@ export function claude(): QueryBuilder {
 // Re-export for convenience
 export { ResponseParser } from './parser.js';
 export { Logger, LogLevel, ConsoleLogger } from './logger.js';
+export { Conversation } from './conversation.js';

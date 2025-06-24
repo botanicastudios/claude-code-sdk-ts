@@ -3,30 +3,30 @@ import type { ClaudeCodeOptions, Message } from './types.js';
 
 /**
  * Query Claude Code with a prompt and options.
- * 
+ *
  * @param prompt - The prompt to send to Claude Code
  * @param options - Configuration options for the query
  * @returns An async iterator that yields messages from Claude Code
- * 
+ *
  * @example
  * ```typescript
  * import { query } from '@anthropic-ai/claude-code-sdk';
- * 
+ *
  * for await (const message of query('Create a hello.txt file')) {
  *   console.log(message);
  * }
  * ```
- * 
+ *
  * @example
  * ```typescript
  * import { query, ClaudeCodeOptions } from '@anthropic-ai/claude-code-sdk';
- * 
+ *
  * const options: ClaudeCodeOptions = {
  *   allowedTools: ['Read', 'Write'],
  *   permissionMode: 'acceptEdits',
  *   cwd: '/Users/me/projects'
  * };
- * 
+ *
  * for await (const message of query('Analyze this codebase', options)) {
  *   if (message.type === 'assistant') {
  *     // Handle assistant messages
@@ -36,10 +36,7 @@ import type { ClaudeCodeOptions, Message } from './types.js';
  * }
  * ```
  */
-export async function* query(
-  prompt: string,
-  options?: ClaudeCodeOptions
-): AsyncGenerator<Message> {
+export async function* query(prompt: string, options?: ClaudeCodeOptions): AsyncGenerator<Message> {
   const client = new InternalClient(prompt, options);
   yield* client.processQuery();
 }
@@ -51,12 +48,5 @@ export * from './errors.js';
 // Export new fluent API (backward compatible - original query function still available)
 export { claude, QueryBuilder } from './fluent.js';
 export { ResponseParser, type ToolExecution, type UsageStats } from './parser.js';
-export { 
-  Logger, 
-  LogLevel, 
-  ConsoleLogger, 
-  JSONLogger, 
-  MultiLogger, 
-  NullLogger,
-  type LogEntry 
-} from './logger.js';
+export { Conversation } from './conversation.js';
+export { Logger, LogLevel, ConsoleLogger, JSONLogger, MultiLogger, NullLogger, type LogEntry } from './logger.js';
