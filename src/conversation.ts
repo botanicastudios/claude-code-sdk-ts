@@ -123,11 +123,13 @@ export class Conversation {
   private sessionIdHandlers: Array<(sessionId: string | null) => void> = [];
   private logger?: Logger;
   private disposed = false;
+  private _keepAlive: boolean;
 
-  constructor(options: ClaudeCodeOptions, logger?: Logger) {
+  constructor(options: ClaudeCodeOptions, logger?: Logger, keepAlive: boolean = false) {
     this.options = { ...options };
     this.currentSessionId = options.sessionId || null; // Get from QueryBuilder options
     this.logger = logger;
+    this._keepAlive = keepAlive;
   }
 
   /**
@@ -146,7 +148,8 @@ export class Conversation {
       prompt,
       {
         ...this.options,
-        sessionId: this.currentSessionId || undefined
+        sessionId: this.currentSessionId || undefined,
+        keepAlive: this._keepAlive // Pass keepAlive flag to client
       },
       true
     ); // Enable streaming mode for conversations
@@ -204,7 +207,8 @@ export class Conversation {
           message,
           {
             ...this.options,
-            sessionId: this.currentSessionId || undefined
+            sessionId: this.currentSessionId || undefined,
+            keepAlive: this._keepAlive // Pass keepAlive flag to client
           },
           true // Use streaming mode so subsequent send() calls can write to stdin
         );
@@ -284,6 +288,24 @@ export class Conversation {
   }
 
   /**
+   * Enable or disable keep-alive mode for persistent conversations
+   * When enabled, the conversation will stay alive across multiple request-response cycles
+   * until explicitly ended with conversation.end()
+   * @param enabled - Whether to enable keep-alive mode (default: true)
+   * @returns this conversation instance for chaining
+   */
+  keepAlive(enabled: boolean = true): Conversation {
+    if (this.disposed) {
+      throw new Error('Conversation has been disposed');
+    }
+
+    this._keepAlive = enabled;
+    this.logger?.debug('Updated keepAlive setting', { keepAlive: enabled });
+
+    return this;
+  }
+
+  /**
    * Dispose of conversation resources and clean up
    */
   async dispose(): Promise<void> {
@@ -342,6 +364,31 @@ export class Conversation {
         this.logger?.error('Stream handler error', { error });
         // Continue with other handlers - don't break conversation flow
       }
+    }
+  }
+
+  /**
+   * Explicitly end the conversation and close stdin
+   * This allows the active process to exit gracefully
+   */
+  async end(): Promise<void> {
+    if (this.disposed) {
+      throw new Error('Conversation has been disposed');
+    }
+
+    this.logger?.debug('Ending conversation - closing stdin of active process', {
+      hasActiveClient: !!this.activeClient,
+      hasActiveTransport: this.activeClient?.hasActiveTransport() ?? false
+    });
+
+    if (this.activeClient?.hasActiveTransport()) {
+      this.activeClient.closeStdin();
+      this.logger?.debug('Closed stdin of active process');
+
+      // Clear active client since process will exit
+      this.activeClient = undefined;
+    } else {
+      this.logger?.debug('No active transport to close');
     }
   }
 }

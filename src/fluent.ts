@@ -185,11 +185,12 @@ export class QueryBuilder {
   }
 
   /**
-   * Create a new evolving conversation with streaming input capability
-   * Uses current QueryBuilder options (including any sessionId from withSessionId())
+   * Create a conversation for streaming input capability
+   * @param keepAlive - If true, keeps the process alive across multiple exchanges until conversation.end() is called
+   * @returns Conversation instance for multi-turn dialogue
    */
-  asConversation(): Conversation {
-    return new Conversation(this.options, this.logger);
+  asConversation(keepAlive: boolean = false): Conversation {
+    return new Conversation(this.options, this.logger, keepAlive);
   }
 
   /**

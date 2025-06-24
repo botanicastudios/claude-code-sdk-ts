@@ -114,6 +114,7 @@ export interface ClaudeCodeOptions {
   debug?: boolean;
   addDirectories?: string[];
   sessionId?: string;
+  keepAlive?: boolean;
 }
 
 // Additional types for internal use

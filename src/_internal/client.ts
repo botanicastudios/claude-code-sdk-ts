@@ -29,7 +29,7 @@ export class InternalClient {
   }
 
   async *processQuery(): AsyncGenerator<Message> {
-    this.transport = new SubprocessCLITransport(this.prompt, this.options, this.streamingMode);
+    this.transport = new SubprocessCLITransport(this.prompt, this.options, this.streamingMode, this.options.keepAlive);
 
     try {
       await this.transport.connect();
