@@ -26,13 +26,33 @@ export class SubprocessCLITransport {
    * Check if the transport has an active process that can accept streaming input
    */
   isActive(): boolean {
-    return !!(
+    const hasProcess = !!this.process;
+    const isKilled = this.process?.killed ?? true;
+    const hasExitCode = this.process?.exitCode !== null;
+    const hasStdin = !!this.process?.stdin;
+    const stdinDestroyed = this.process?.stdin?.destroyed ?? true;
+
+    const isActive = !!(
       this.process &&
       !this.process.killed &&
       this.process.exitCode === null &&
       this.process.stdin &&
       !this.process.stdin.destroyed
     );
+
+    if (this.options.debug) {
+      console.error('DEBUG: [Transport] isActive() check:', {
+        hasProcess,
+        isKilled,
+        hasExitCode,
+        exitCode: this.process?.exitCode,
+        hasStdin,
+        stdinDestroyed,
+        result: isActive
+      });
+    }
+
+    return isActive;
   }
 
   /**
@@ -54,9 +74,24 @@ export class SubprocessCLITransport {
               content: [{ type: 'text', text: data }]
             }
           };
+
+          if (this.options.debug) {
+            console.error(
+              'DEBUG: [Transport] Writing JSONL to process stdin:',
+              JSON.stringify(jsonlMessage).substring(0, 150) + '...'
+            );
+          }
+
           this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
+
+          if (this.options.debug) {
+            console.error('DEBUG: [Transport] Successfully wrote JSONL to stdin');
+          }
         } else {
           // For non-streaming mode, write as-is (though this shouldn't happen)
+          if (this.options.debug) {
+            console.error('DEBUG: [Transport] Writing raw data to stdin:', data.substring(0, 100) + '...');
+          }
           this.process.stdin.write(data);
         }
       } catch (error) {
@@ -212,8 +247,7 @@ export class SubprocessCLITransport {
         stdin: 'pipe',
         stdout: 'pipe',
         stderr: 'pipe',
-        buffer: false,
-        timeout: this.options.timeout || this.DEFAULT_TIMEOUT
+        buffer: false
       });
 
       // Set up process error handling
@@ -322,7 +356,7 @@ export class SubprocessCLITransport {
         }
       }
 
-      // Wait for process to exit
+      // After all messages are processed, wait for process to exit
       try {
         await this.process;
       } catch (error: any) {
