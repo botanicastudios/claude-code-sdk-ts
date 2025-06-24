@@ -18,12 +18,12 @@ import type { Logger } from './logger.js';
  */
 export class ResponseParser {
   protected messages: Message[] = [];
-  private consumed = false;
+  protected consumed = false;
 
   constructor(
-    private generator: AsyncGenerator<Message>,
-    private handlers: Array<(message: Message) => void> = [],
-    private logger?: Logger
+    protected generator: AsyncGenerator<Message>,
+    protected handlers: Array<(message: Message) => void> = [],
+    protected logger?: Logger
   ) {}
 
   /**

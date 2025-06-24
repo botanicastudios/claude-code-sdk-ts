@@ -12,10 +12,57 @@ export class SubprocessCLITransport {
   private process?: ExecaChildProcess;
   private options: ClaudeCodeOptions;
   private prompt: string;
+  private connectTimeout?: NodeJS.Timeout;
+  private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
+  private streamingMode: boolean = false; // Track if we need streaming input capability
 
-  constructor(prompt: string, options: ClaudeCodeOptions = {}) {
+  constructor(prompt: string, options: ClaudeCodeOptions = {}, streamingMode: boolean = false) {
     this.prompt = prompt;
     this.options = options;
+    this.streamingMode = streamingMode;
+  }
+
+  /**
+   * Check if the transport has an active process that can accept streaming input
+   */
+  isActive(): boolean {
+    return !!(
+      this.process &&
+      !this.process.killed &&
+      this.process.exitCode === null &&
+      this.process.stdin &&
+      !this.process.stdin.destroyed
+    );
+  }
+
+  /**
+   * Write streaming input to the active process stdin
+   */
+  writeToStdin(data: string): void {
+    if (!this.isActive()) {
+      throw new Error('No active process to write to');
+    }
+
+    if (this.process && this.process.stdin) {
+      try {
+        if (this.streamingMode) {
+          // For streaming mode, wrap message in JSONL format
+          const jsonlMessage = {
+            type: 'user',
+            message: {
+              role: 'user',
+              content: [{ type: 'text', text: data }]
+            }
+          };
+          this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
+        } else {
+          // For non-streaming mode, write as-is (though this shouldn't happen)
+          this.process.stdin.write(data);
+        }
+      } catch (error) {
+        throw new Error(`Failed to write to stdin: ${error}`);
+      }
+    }
   }
 
   private async findCLI(): Promise<string> {
@@ -137,6 +184,11 @@ export class SubprocessCLITransport {
       args.push('--add-dir', this.options.addDirectories.join(' '));
     }
 
+    // Add streaming input support for conversations
+    if (this.streamingMode) {
+      args.push('--input-format', 'stream-json');
+    }
+
     // Add --print flag (prompt will be sent via stdin)
     args.push('--print');
 
@@ -165,15 +217,54 @@ export class SubprocessCLITransport {
         stdin: 'pipe',
         stdout: 'pipe',
         stderr: 'pipe',
-        buffer: false
+        buffer: false,
+        timeout: this.options.timeout || this.DEFAULT_TIMEOUT
+      });
+
+      // Set up process error handling
+      this.process.on('error', error => {
+        if (this.options.debug) {
+          console.error('DEBUG: Process error:', error);
+        }
+      });
+
+      this.process.on('exit', (code, signal) => {
+        if (this.options.debug) {
+          console.error('DEBUG: Process exited:', { code, signal });
+        }
       });
 
       // Send prompt via stdin
       if (this.process.stdin) {
-        this.process.stdin.write(this.prompt);
-        this.process.stdin.end();
+        if (this.streamingMode) {
+          // For streaming mode, send initial prompt as JSONL
+          const jsonlMessage = {
+            type: 'user',
+            message: {
+              role: 'user',
+              content: [{ type: 'text', text: this.prompt }]
+            }
+          };
+          this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
+          // Keep stdin open for additional streaming input
+        } else {
+          // For simple queries, send as plain text and close stdin
+          this.process.stdin.write(this.prompt + '\n');
+          this.process.stdin.end();
+        }
+      }
+
+      // Set up connection timeout
+      if (this.options.timeout) {
+        this.connectTimeout = setTimeout(() => {
+          if (this.process && !this.process.killed) {
+            this.process.cancel();
+            throw new CLIConnectionError(`Connection timeout after ${this.options.timeout}ms`);
+          }
+        }, this.options.timeout);
       }
     } catch (error) {
+      await this.cleanup();
       throw new CLIConnectionError(`Failed to start Claude Code CLI: ${error}`);
     }
   }
@@ -181,6 +272,12 @@ export class SubprocessCLITransport {
   async *receiveMessages(): AsyncGenerator<CLIOutput> {
     if (!this.process || !this.process.stdout) {
       throw new CLIConnectionError('Not connected to CLI');
+    }
+
+    // Clear connection timeout once we start receiving messages
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = undefined;
     }
 
     // Handle stderr in background
@@ -195,6 +292,12 @@ export class SubprocessCLITransport {
           console.error('DEBUG stderr:', line);
         }
       });
+
+      stderrRl.on('error', error => {
+        if (this.options.debug) {
+          console.error('DEBUG stderr error:', error);
+        }
+      });
     }
 
     const rl = createInterface({
@@ -202,41 +305,89 @@ export class SubprocessCLITransport {
       crlfDelay: Infinity
     });
 
-    // Process stream-json format - each line is a JSON object
-    for await (const line of rl) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) continue;
-
-      if (this.options.debug) {
-        console.error('DEBUG stdout:', trimmedLine);
-      }
-
-      try {
-        const parsed = JSON.parse(trimmedLine) as CLIOutput;
-        yield parsed;
-      } catch (error) {
-        // Skip non-JSON lines (like Python SDK does)
-        if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
-          throw new CLIJSONDecodeError(`Failed to parse CLI output: ${error}`, trimmedLine);
-        }
-        continue;
-      }
-    }
-
-    // Wait for process to exit
     try {
-      await this.process;
-    } catch (error: any) {
-      if (error.exitCode !== 0) {
-        throw new ProcessError(`Claude Code CLI exited with code ${error.exitCode}`, error.exitCode, error.signal);
+      // Process stream-json format - each line is a JSON object
+      for await (const line of rl) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        if (this.options.debug) {
+          console.error('DEBUG stdout:', trimmedLine);
+        }
+
+        try {
+          const parsed = JSON.parse(trimmedLine) as CLIOutput;
+          yield parsed;
+        } catch (error) {
+          // Skip non-JSON lines (like Python SDK does)
+          if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
+            throw new CLIJSONDecodeError(`Failed to parse CLI output: ${error}`, trimmedLine);
+          }
+          continue;
+        }
       }
+
+      // Wait for process to exit
+      try {
+        await this.process;
+      } catch (error: any) {
+        if (error.exitCode !== 0) {
+          throw new ProcessError(`Claude Code CLI exited with code ${error.exitCode}`, error.exitCode, error.signal);
+        }
+      }
+    } catch (error) {
+      // Ensure cleanup on any error
+      await this.cleanup();
+      throw error;
+    } finally {
+      rl.close();
     }
   }
 
   async disconnect(): Promise<void> {
+    await this.cleanup();
+  }
+
+  private async cleanup(): Promise<void> {
+    // Clear any timeouts
+    if (this.connectTimeout) {
+      clearTimeout(this.connectTimeout);
+      this.connectTimeout = undefined;
+    }
+
+    // Clean up process
     if (this.process) {
-      this.process.cancel();
-      this.process = undefined;
+      try {
+        if (!this.process.killed) {
+          this.process.cancel();
+        }
+
+        // Wait a bit for graceful shutdown
+        await Promise.race([
+          this.process.catch(() => {}), // Ignore exit errors
+          new Promise(resolve => setTimeout(resolve, 1000)) // 1 second timeout
+        ]);
+      } catch (error) {
+        // Ignore cleanup errors
+        if (this.options.debug) {
+          console.error('DEBUG: Cleanup error:', error);
+        }
+      } finally {
+        this.process = undefined;
+      }
+    }
+  }
+
+  /**
+   * Close stdin to signal end of streaming input (for streaming mode)
+   */
+  closeStdin(): void {
+    if (this.process && this.process.stdin && !this.process.stdin.destroyed) {
+      try {
+        this.process.stdin.end();
+      } catch (error) {
+        // Ignore errors when closing stdin
+      }
     }
   }
 }
