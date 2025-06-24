@@ -7,6 +7,7 @@ The Claude Code SDK now includes a powerful fluent API that makes it easier to b
 - [Getting Started](#getting-started)
 - [Query Builder](#query-builder)
 - [Response Parser](#response-parser)
+- [Session Management](#session-management)
 - [Logging Framework](#logging-framework)
 - [Advanced Patterns](#advanced-patterns)
 - [Migration Guide](#migration-guide)
@@ -154,6 +155,103 @@ const customData = await parser.transform(messages => {
   // Your custom logic
   return processMessages(messages);
 });
+```
+
+## Session Management
+
+Sessions allow you to maintain conversation context across multiple queries. Claude remembers previous parts of the conversation, enabling more coherent multi-turn interactions.
+
+### Basic Session Pattern
+
+```typescript
+// Start a conversation and get the session ID
+const builder = claude().withModel('sonnet').skipPermissions();
+const parser = builder.query('Tell me a random number between 1 and 100');
+
+const sessionId = await parser.getSessionId();
+const firstResponse = await parser.asText();
+
+// Continue the conversation using the session ID
+const secondResponse = await builder.withSessionId(sessionId).query('What number did you pick?').asText();
+
+console.log('First:', firstResponse); // "I picked 42"
+console.log('Second:', secondResponse); // "I picked 42" (remembers the context)
+```
+
+### Session ID Extraction
+
+Get the session ID from any completed query:
+
+```typescript
+const parser = claude().query('Hello, I am working on a project about renewable energy');
+
+// Extract session ID for later use
+const sessionId = await parser.getSessionId();
+const greeting = await parser.asText();
+
+// Store the session ID for later conversations
+localStorage.setItem('claude-session', sessionId);
+```
+
+### Continuing Sessions
+
+Use stored session IDs to resume conversations:
+
+```typescript
+// Retrieve stored session ID
+const sessionId = localStorage.getItem('claude-session');
+
+if (sessionId) {
+  const response = await claude().withSessionId(sessionId).query('Can you remind me what we were discussing?').asText();
+
+  console.log(response); // "We were discussing renewable energy projects..."
+}
+```
+
+### Session Branching
+
+Create multiple conversation branches from the same starting point:
+
+```typescript
+const builder = claude().withModel('sonnet').skipPermissions();
+
+// Establish initial context
+const initialParser = builder.query('I need help with a JavaScript project');
+const sessionId = await initialParser.getSessionId();
+await initialParser.asText();
+
+// Branch 1: Focus on architecture
+const architectureResponse = await builder
+  .withSessionId(sessionId)
+  .query('What architecture patterns should I consider?')
+  .asText();
+
+// Branch 2: Focus on testing (same starting context)
+const testingResponse = await builder
+  .withSessionId(sessionId)
+  .query('What testing frameworks would you recommend?')
+  .asText();
+```
+
+### Classic API with Sessions
+
+You can also use sessions with the original query function:
+
+```typescript
+import { query } from '@instantlyeasy/claude-code-sdk-ts';
+
+// Use sessionId in options
+const options = {
+  sessionId: 'your-session-id',
+  model: 'sonnet',
+  permissionMode: 'bypassPermissions'
+};
+
+for await (const message of query('Continue our conversation', options)) {
+  if (message.type === 'assistant') {
+    // Handle response with maintained context
+  }
+}
 ```
 
 ## Logging Framework
