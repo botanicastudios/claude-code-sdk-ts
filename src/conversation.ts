@@ -151,7 +151,7 @@ export class Conversation {
       true
     ); // Enable streaming mode for conversations
 
-    // Store reference to active client for streaming input
+    // Store as active client so send() can write to stdin of the same process
     this.activeClient = client;
 
     // Create session-aware parser that updates session ID when it receives responses
@@ -178,21 +178,50 @@ export class Conversation {
       throw new Error('Conversation has been disposed');
     }
 
+    const hasActiveClient = !!this.activeClient;
+    const hasActiveTransport = this.activeClient?.hasActiveTransport() ?? false;
+
     this.logger?.debug('Sending streaming input', {
-      message,
-      hasActiveClient: !!this.activeClient,
-      hasActiveTransport: this.activeClient?.hasActiveTransport() ?? false
+      message: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+      hasActiveClient,
+      hasActiveTransport,
+      activeClientType: this.activeClient ? 'InternalClient' : 'none'
     });
 
     try {
       if (this.activeClient?.hasActiveTransport()) {
         // Send to active process
+        this.logger?.debug('Found active transport - writing to stdin of existing process');
         await this.activeClient.sendStreamingInput(message);
-        this.logger?.debug('Successfully sent streaming input to active process');
+        this.logger?.debug('Successfully sent streaming input to active process stdin');
       } else {
-        // Start new process - will update currentSessionId when it responds
-        this.logger?.debug('No active transport, starting new query for streaming input');
-        this.query(message);
+        // Start new client for fire-and-forget message processing
+        this.logger?.debug('No active transport available', {
+          reason: hasActiveClient ? 'client exists but transport inactive' : 'no active client',
+          willSpawnNewProcess: true
+        });
+        const client = new InternalClient(
+          message,
+          {
+            ...this.options,
+            sessionId: this.currentSessionId || undefined
+          },
+          true // Use streaming mode so subsequent send() calls can write to stdin
+        );
+
+        // Store as active client so future send() calls can use it
+        this.activeClient = client;
+
+        // Process messages in background (fire-and-forget)
+        (async () => {
+          try {
+            for await (const response of client.processQuery()) {
+              await this.emitMessage(response);
+            }
+          } catch (error) {
+            this.logger?.error('Error processing send() message', { error });
+          }
+        })();
       }
     } catch (error) {
       this.logger?.error('Failed to send streaming input', { error });

@@ -41,11 +41,12 @@ export class InternalClient {
         }
       }
     } finally {
-      // Only disconnect if not in streaming mode - keep transport alive for streaming input
-      if (!this.streamingMode) {
+      // For non-streaming mode, disconnect immediately
+      // For streaming mode, keep transport alive for potential streaming input
+      if (!this.streamingMode && this.transport) {
         await this.transport.disconnect();
       }
-      // Keep transport reference for potential streaming input until explicitly cleared
+      // Keep transport reference for potential streaming input until explicitly disposed
     }
   }
 
@@ -57,6 +58,9 @@ export class InternalClient {
       throw new Error('No active transport for streaming input');
     }
 
+    this.options.debug &&
+      console.error('DEBUG: Sending streaming input to active transport:', message.substring(0, 50) + '...');
+
     const jsonlMessage = {
       type: 'user',
       message: {
@@ -65,7 +69,12 @@ export class InternalClient {
       }
     };
 
+    this.options.debug &&
+      console.error('DEBUG: Writing JSONL to stdin:', JSON.stringify(jsonlMessage).substring(0, 100) + '...');
+
     this.transport.writeToStdin(JSON.stringify(jsonlMessage) + '\n');
+
+    this.options.debug && console.error('DEBUG: Successfully wrote JSONL message to stdin');
   }
 
   /**
