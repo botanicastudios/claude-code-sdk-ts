@@ -1,6 +1,6 @@
 {
   "name": "@botanicastudios/claude-code-sdk-ts",
-  "version": "0.2.2-fork",
+  "version": "0.2.3-fork",
   "description": "Unofficial TypeScript port of the official Python Claude Code SDK",
   "type": "module",
   "main": "dist/index.js",
