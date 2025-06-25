@@ -1,16 +1,16 @@
 {
   "name": "@botanicastudios/claude-code-sdk-ts",
-  "version": "0.2.3-fork",
+  "version": "0.2.5-fork",
   "description": "Unofficial TypeScript port of the official Python Claude Code SDK",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [

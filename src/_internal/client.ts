@@ -1,5 +1,5 @@
 import { SubprocessCLITransport } from './transport/subprocess-cli.js';
-import type { ClaudeCodeOptions, Message } from '../types.js';
+import type { ClaudeCodeOptions, Message, UserMessage } from '../types.js';
 import { ClaudeSDKError } from '../errors.js';
 
 export class InternalClient {
@@ -53,19 +53,21 @@ export class InternalClient {
   /**
    * Send streaming input to active transport
    */
-  async sendStreamingInput(message: string): Promise<void> {
+  async sendStreamingInput(userMessage: UserMessage): Promise<void> {
     if (!this.transport?.isActive()) {
       throw new Error('No active transport for streaming input');
     }
 
-    this.options.debug &&
-      console.error('DEBUG: Sending streaming input to active transport:', message.substring(0, 50) + '...');
+    const messagePreview =
+      typeof userMessage.content === 'string' ? userMessage.content.substring(0, 50) + '...' : '[content blocks]';
+
+    this.options.debug && console.error('DEBUG: Sending streaming input to active transport:', messagePreview);
 
     const jsonlMessage = {
       type: 'user',
       message: {
         role: 'user',
-        content: [{ type: 'text', text: message }]
+        content: userMessage.content
       }
     };
 
@@ -130,6 +132,7 @@ export class InternalClient {
           type: 'result',
           subtype: output.subtype,
           content: output.result || '',
+          result: output.result || '',
           usage: output.usage,
           cost: {
             total_cost: output.total_cost_usd

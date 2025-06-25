@@ -1,7 +1,20 @@
 import { InternalClient } from './_internal/client.js';
 import { ResponseParser } from './parser.js';
-import type { ClaudeCodeOptions, Message } from './types.js';
+import type { ClaudeCodeOptions, Message, TextBlock, UserMessage } from './types.js';
 import type { Logger } from './logger.js';
+
+/**
+ * Convert flexible input types to UserMessage content
+ */
+function normalizeUserContent(input: string | TextBlock | TextBlock[]): string | Array<TextBlock | unknown> {
+  if (typeof input === 'string') {
+    return [{ type: 'text', text: input }];
+  }
+  if (Array.isArray(input)) {
+    return input;
+  }
+  return [input];
+}
 
 /**
  * Session-aware ResponseParser that updates conversation session ID
@@ -176,16 +189,26 @@ export class Conversation {
    * Send streaming input (fire-and-forget with error handling)
    * Resolves when message is delivered to stdin, not when response received
    */
-  async send(message: string): Promise<void> {
+  async send(input: string | TextBlock | TextBlock[]): Promise<void> {
     if (this.disposed) {
       throw new Error('Conversation has been disposed');
     }
 
+    // Create UserMessage from flexible input
+    const userMessage: UserMessage = {
+      type: 'user',
+      content: normalizeUserContent(input),
+      session_id: this.currentSessionId || undefined
+    };
+
     const hasActiveClient = !!this.activeClient;
     const hasActiveTransport = this.activeClient?.hasActiveTransport() ?? false;
 
+    const messagePreview =
+      typeof input === 'string' ? input.substring(0, 50) + (input.length > 50 ? '...' : '') : '[TextBlock content]';
+
     this.logger?.debug('Sending streaming input', {
-      message: message.substring(0, 50) + (message.length > 50 ? '...' : ''),
+      message: messagePreview,
       hasActiveClient,
       hasActiveTransport,
       activeClientType: this.activeClient ? 'InternalClient' : 'none'
@@ -195,7 +218,7 @@ export class Conversation {
       if (this.activeClient?.hasActiveTransport()) {
         // Send to active process
         this.logger?.debug('Found active transport - writing to stdin of existing process');
-        await this.activeClient.sendStreamingInput(message);
+        await this.activeClient.sendStreamingInput(userMessage);
         this.logger?.debug('Successfully sent streaming input to active process stdin');
       } else {
         // Start new client for fire-and-forget message processing
@@ -203,8 +226,19 @@ export class Conversation {
           reason: hasActiveClient ? 'client exists but transport inactive' : 'no active client',
           willSpawnNewProcess: true
         });
+
+        // For new client, we need to extract string content for the prompt
+        const promptText =
+          typeof input === 'string'
+            ? input
+            : Array.isArray(input)
+              ? input.map(block => (block.type === 'text' ? block.text : '[non-text]')).join(' ')
+              : input.type === 'text'
+                ? input.text
+                : '[non-text]';
+
         const client = new InternalClient(
-          message,
+          promptText,
           {
             ...this.options,
             sessionId: this.currentSessionId || undefined,
