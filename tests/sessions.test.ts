@@ -152,8 +152,16 @@ describe('Session Management', () => {
       }
 
       expect(mockQuery).toHaveBeenCalledTimes(2);
-      expect(mockQuery).toHaveBeenNthCalledWith(1, 'Start new session', optionsWithNull);
-      expect(mockQuery).toHaveBeenNthCalledWith(2, 'Start another session', optionsWithUndefined);
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        1,
+        'Start new session',
+        optionsWithNull
+      );
+      expect(mockQuery).toHaveBeenNthCalledWith(
+        2,
+        'Start another session',
+        optionsWithUndefined
+      );
     });
 
     it('should pass sessionId through ResponseParser when using fluent API', async () => {
@@ -230,7 +238,7 @@ describe('Session Management', () => {
 
       // Verify all messages contain session_id
       expect(messages).toHaveLength(3);
-      messages.forEach(message => {
+      messages.forEach((message) => {
         if (message.session_id) {
           expect(message.session_id).toBe('transport-test-session');
         }
@@ -293,7 +301,10 @@ describe('Session Management', () => {
         };
       });
 
-      const parser = claude().withModel('sonnet').skipPermissions().query('Say hello in 3 different languages');
+      const parser = claude()
+        .withModel('sonnet')
+        .skipPermissions()
+        .query('Say hello in 3 different languages');
 
       const sessionId = await (parser as SessionResponseParser).getSessionId();
       expect(sessionId).toBe('test-session-123');
@@ -308,7 +319,10 @@ describe('Session Management', () => {
         yield { type: 'result', content: 'done' };
       });
 
-      const parser = claude().withModel('sonnet').skipPermissions().query('Say hello');
+      const parser = claude()
+        .withModel('sonnet')
+        .skipPermissions()
+        .query('Say hello');
 
       const sessionId = await (parser as SessionResponseParser).getSessionId();
       expect(sessionId).toBeNull();
@@ -347,7 +361,10 @@ describe('Session Management', () => {
       const firstNumber = await parser.asText();
 
       if (sessionId) {
-        const secondNumber = await builder.withSessionId(sessionId).query('Which number did you pick?').asText();
+        const secondNumber = await builder
+          .withSessionId(sessionId)
+          .query('Which number did you pick?')
+          .asText();
 
         expect(sessionId).toBe('session-123');
         expect(firstNumber).toBe('42');
@@ -374,7 +391,9 @@ describe('Session Management', () => {
 
       const builder = claude().withModel('sonnet').skipPermissions();
 
-      builder.withSessionId('existing-session-456').query('Continue our conversation');
+      builder
+        .withSessionId('existing-session-456')
+        .query('Continue our conversation');
 
       expect(mockQuery).toHaveBeenCalledWith(
         'Continue our conversation',
@@ -389,7 +408,10 @@ describe('Session Management', () => {
         yield { type: 'result', content: 'done' };
       });
 
-      const builder = claude().withModel('sonnet').skipPermissions().withTimeout(30000);
+      const builder = claude()
+        .withModel('sonnet')
+        .skipPermissions()
+        .withTimeout(30000);
 
       builder.withSessionId('session-789').query('test');
 
@@ -430,7 +452,9 @@ describe('Session Management', () => {
 
       const parser = builder.withSessionId('invalid-session').query('test');
 
-      await expect(parser.asText()).rejects.toThrow('Claude Code CLI exited with code 1');
+      await expect(parser.asText()).rejects.toThrow(
+        'Claude Code CLI exited with code 1'
+      );
     });
   });
 });

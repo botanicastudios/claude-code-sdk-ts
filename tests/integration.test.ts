@@ -11,16 +11,27 @@ describe('Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockProcessQuery = vi.fn();
-    vi.mocked(InternalClient).mockImplementation(() => ({
-      processQuery: mockProcessQuery
-    } as any));
+    vi.mocked(InternalClient).mockImplementation(
+      () =>
+        ({
+          processQuery: mockProcessQuery
+        }) as any
+    );
   });
 
   describe('query function', () => {
     it('should handle simple text conversation', async () => {
       const messages: Message[] = [
         { type: 'user', content: 'Hello, Claude!' },
-        { type: 'assistant', content: [{ type: 'text', text: 'Hello! How can I help you today?' }] },
+        {
+          type: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: 'Hello! How can I help you today?'
+            }
+          ]
+        },
         { type: 'result', content: 'Conversation completed' }
       ];
 
@@ -45,12 +56,18 @@ describe('Integration Tests', () => {
         {
           type: 'assistant',
           content: [
-            { type: 'text', text: "I'll create a file called hello.txt for you." },
+            {
+              type: 'text',
+              text: "I'll create a file called hello.txt for you."
+            },
             {
               type: 'tool_use',
               id: 'tool-1',
               name: 'Write',
-              input: { file_path: 'hello.txt', content: 'Hello, World!' }
+              input: {
+                file_path: 'hello.txt',
+                content: 'Hello, World!'
+              }
             }
           ]
         },
@@ -199,10 +216,21 @@ describe('Integration Tests', () => {
 
     it('should handle system messages', async () => {
       const messages: Message[] = [
-        { type: 'system', subtype: 'info', data: { message: 'Starting analysis...' } },
+        {
+          type: 'system',
+          subtype: 'info',
+          data: { message: 'Starting analysis...' }
+        },
         { type: 'user', content: 'Analyze the code' },
-        { type: 'assistant', content: [{ type: 'text', text: 'Analyzing...' }] },
-        { type: 'system', subtype: 'info', data: { message: 'Analysis complete' } },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Analyzing...' }]
+        },
+        {
+          type: 'system',
+          subtype: 'info',
+          data: { message: 'Analysis complete' }
+        },
         { type: 'result', content: 'Code analysis finished' }
       ];
 
@@ -218,7 +246,7 @@ describe('Integration Tests', () => {
       }
 
       expect(results).toHaveLength(5);
-      expect(results.filter(m => m.type === 'system')).toHaveLength(2);
+      expect(results.filter((m) => m.type === 'system')).toHaveLength(2);
     });
   });
 });

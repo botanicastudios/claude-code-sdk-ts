@@ -39,7 +39,9 @@ describe('Error Classes', () => {
       const error = new CLINotFoundError();
       expect(error).toBeInstanceOf(ClaudeSDKError);
       expect(error).toBeInstanceOf(CLINotFoundError);
-      expect(error.message).toBe('Claude Code CLI not found. Please install it from https://github.com/anthropics/claude-code');
+      expect(error.message).toBe(
+        'Claude Code CLI not found. Please install it from https://github.com/anthropics/claude-code'
+      );
       expect(error.name).toBe('CLINotFoundError');
     });
 

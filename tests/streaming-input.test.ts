@@ -13,52 +13,65 @@ vi.mock('../src/_internal/client.js', () => {
   };
 
   return {
-    InternalClient: vi.fn().mockImplementation((prompt: string, options: any, streamingMode: boolean = false) => {
-      const mockMessages: Message[] = [];
+    InternalClient: vi
+      .fn()
+      .mockImplementation(
+        (prompt: string, options: any, streamingMode: boolean = false) => {
+          const mockMessages: Message[] = [];
 
-      // Generate appropriate response based on prompt content
-      if (prompt.includes('security issues')) {
-        mockMessages.push({
-          type: 'assistant',
-          content: [{ type: 'text', text: `Starting analysis and analyzing the codebase for: ${prompt}` }],
-          session_id: 'streaming-session-123'
-        });
-      } else {
-        mockMessages.push({
-          type: 'assistant',
-          content: [{ type: 'text', text: `Processing: ${prompt}` }],
-          session_id: 'streaming-session-123'
-        });
-      }
-
-      // Add additional messages for prompts that suggest streaming behavior
-      if (prompt.includes('streaming') || prompt.includes('analysis') || prompt.includes('codebase')) {
-        mockMessages.push({
-          type: 'assistant',
-          content: [{ type: 'text', text: 'Received streaming input' }],
-          session_id: 'streaming-session-evolved'
-        });
-      }
-
-      mockMessages.push({
-        type: 'result',
-        content: 'Task completed',
-        session_id: 'streaming-session-evolved'
-      });
-
-      return {
-        async *processQuery() {
-          for (const message of mockMessages) {
-            yield message;
+          // Generate appropriate response based on prompt content
+          if (prompt.includes('security issues')) {
+            mockMessages.push({
+              type: 'assistant',
+              content: [
+                {
+                  type: 'text',
+                  text: `Starting analysis and analyzing the codebase for: ${prompt}`
+                }
+              ],
+              session_id: 'streaming-session-123'
+            });
+          } else {
+            mockMessages.push({
+              type: 'assistant',
+              content: [{ type: 'text', text: `Processing: ${prompt}` }],
+              session_id: 'streaming-session-123'
+            });
           }
-        },
-        getTransport: () => mockTransport,
-        hasActiveTransport: () => true,
-        sendStreamingInput: vi.fn().mockResolvedValue(undefined),
-        closeStdin: vi.fn(),
-        dispose: vi.fn()
-      };
-    })
+
+          // Add additional messages for prompts that suggest streaming behavior
+          if (
+            prompt.includes('streaming') ||
+            prompt.includes('analysis') ||
+            prompt.includes('codebase')
+          ) {
+            mockMessages.push({
+              type: 'assistant',
+              content: [{ type: 'text', text: 'Received streaming input' }],
+              session_id: 'streaming-session-evolved'
+            });
+          }
+
+          mockMessages.push({
+            type: 'result',
+            content: 'Task completed',
+            session_id: 'streaming-session-evolved'
+          });
+
+          return {
+            async *processQuery() {
+              for (const message of mockMessages) {
+                yield message;
+              }
+            },
+            getTransport: () => mockTransport,
+            hasActiveTransport: () => true,
+            sendStreamingInput: vi.fn().mockResolvedValue(undefined),
+            closeStdin: vi.fn(),
+            dispose: vi.fn()
+          };
+        }
+      )
   };
 });
 
@@ -113,7 +126,7 @@ describe('Streaming Input Tests', () => {
       await conversation.send('Start new analysis');
 
       // Wait for async session update
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(conversation.getSessionId()).toBe('streaming-session-evolved');
     });
@@ -140,7 +153,7 @@ describe('Streaming Input Tests', () => {
 
       // Set up conversation-wide streaming
       const streamedMessages: Message[] = [];
-      conversation.stream(message => {
+      conversation.stream((message) => {
         streamedMessages.push(message);
       });
 
@@ -155,19 +168,25 @@ describe('Streaming Input Tests', () => {
       // Get the final result
       const result = await parser.asText();
 
-      expect(result).toContain('Processing: Create a React app with full setup');
+      expect(result).toContain(
+        'Processing: Create a React app with full setup'
+      );
       expect(streamedMessages.length).toBeGreaterThan(0);
     });
 
     it('should handle the codebase analysis pattern from architecture doc', async () => {
       conversation = claude().asConversation();
-      const parser = conversation.query('Analyze this codebase for security issues');
+      const parser = conversation.query(
+        'Analyze this codebase for security issues'
+      );
 
       // Stream messages from specific query with conditional streaming input
       let sentGuidance = false;
-      await parser.stream(async message => {
+      await parser.stream(async (message) => {
         if (message.type === 'assistant' && !sentGuidance) {
-          const text = message.content.find(block => block.type === 'text')?.text;
+          const text = message.content.find(
+            (block) => block.type === 'text'
+          )?.text;
           if (text?.includes('analyzing')) {
             await conversation.send('Focus on JWT token validation');
             sentGuidance = true;
@@ -209,14 +228,18 @@ describe('Streaming Input Tests', () => {
       // For the new implementation, send() creates a new client when no active transport
       // so errors would occur during the background processing, not during send() call
       // This test verifies that send() itself doesn't throw synchronously
-      await expect(conversation.send('This should work')).resolves.not.toThrow();
+      await expect(
+        conversation.send('This should work')
+      ).resolves.not.toThrow();
     });
 
     it('should handle disposed conversation errors', async () => {
       conversation = claude().asConversation();
       await conversation.dispose();
 
-      await expect(conversation.send('Should fail')).rejects.toThrow('Conversation has been disposed');
+      await expect(conversation.send('Should fail')).rejects.toThrow(
+        'Conversation has been disposed'
+      );
     });
   });
 
@@ -225,7 +248,7 @@ describe('Streaming Input Tests', () => {
       conversation = claude().asConversation();
 
       const sessionIds: (string | null)[] = [];
-      conversation.onSessionId(sessionId => {
+      conversation.onSessionId((sessionId) => {
         sessionIds.push(sessionId);
       });
 
@@ -269,7 +292,9 @@ describe('Streaming Input Tests', () => {
         const uiBranch = builder.withSessionId(sessionId).asConversation();
 
         // Start complex tasks
-        const apiParser = apiBranch.query('Implement comprehensive API architecture');
+        const apiParser = apiBranch.query(
+          'Implement comprehensive API architecture'
+        );
         const uiParser = uiBranch.query('Design complete user interface');
 
         // Send streaming input to either branch
@@ -280,8 +305,12 @@ describe('Streaming Input Tests', () => {
         const apiResult = await apiParser.asText();
         const uiResult = await uiParser.asText();
 
-        expect(apiResult).toContain('Processing: Implement comprehensive API architecture');
-        expect(uiResult).toContain('Processing: Design complete user interface');
+        expect(apiResult).toContain(
+          'Processing: Implement comprehensive API architecture'
+        );
+        expect(uiResult).toContain(
+          'Processing: Design complete user interface'
+        );
 
         await apiBranch.dispose();
         await uiBranch.dispose();
@@ -314,7 +343,7 @@ describe('Streaming Input Tests', () => {
       conversation = claude().asConversation();
 
       const allMessages: Message[] = [];
-      conversation.stream(message => {
+      conversation.stream((message) => {
         allMessages.push(message);
       });
 
@@ -340,7 +369,7 @@ describe('Streaming Input Tests', () => {
       await conversation.send('Generate a report');
 
       // Wait for async message processing
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       // Should have collected streaming results
       expect(allMessages.length).toBeGreaterThan(0);

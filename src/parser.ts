@@ -60,7 +60,9 @@ export class ResponseParser {
   async asResult(): Promise<string | null> {
     await this.consume();
 
-    const resultMsg = this.messages.findLast((msg): msg is ResultMessage => msg.type === 'result');
+    const resultMsg = this.messages.findLast(
+      (msg): msg is ResultMessage => msg.type === 'result'
+    );
     return resultMsg?.content ?? null;
   }
 
@@ -101,7 +103,9 @@ export class ResponseParser {
    */
   async findToolResults(toolName: string): Promise<any[]> {
     const executions = await this.asToolExecutions();
-    return executions.filter(exec => exec.tool === toolName && !exec.isError).map(exec => exec.result);
+    return executions
+      .filter((exec) => exec.tool === toolName && !exec.isError)
+      .map((exec) => exec.result);
   }
 
   /**
@@ -124,7 +128,9 @@ export class ResponseParser {
       try {
         return JSON.parse(codeBlockMatch[1] ?? '');
       } catch (e) {
-        this.logger?.warn('Failed to parse JSON from code block', { error: e });
+        this.logger?.warn('Failed to parse JSON from code block', {
+          error: e
+        });
       }
     }
 
@@ -138,7 +144,9 @@ export class ResponseParser {
         try {
           return JSON.parse(jsonMatch[0]);
         } catch (e) {
-          this.logger?.warn('Failed to parse JSON from text', { error: e });
+          this.logger?.warn('Failed to parse JSON from text', {
+            error: e
+          });
         }
       }
     }
@@ -152,7 +160,9 @@ export class ResponseParser {
   async getUsage(): Promise<UsageStats | null> {
     await this.consume();
 
-    const resultMsg = this.messages.findLast((msg): msg is ResultMessage => msg.type === 'result');
+    const resultMsg = this.messages.findLast(
+      (msg): msg is ResultMessage => msg.type === 'result'
+    );
     if (!resultMsg?.usage) return null;
 
     return {
@@ -160,7 +170,9 @@ export class ResponseParser {
       outputTokens: resultMsg.usage.output_tokens ?? 0,
       cacheCreationTokens: resultMsg.usage.cache_creation_input_tokens ?? 0,
       cacheReadTokens: resultMsg.usage.cache_read_input_tokens ?? 0,
-      totalTokens: (resultMsg.usage.input_tokens ?? 0) + (resultMsg.usage.output_tokens ?? 0),
+      totalTokens:
+        (resultMsg.usage.input_tokens ?? 0) +
+        (resultMsg.usage.output_tokens ?? 0),
       totalCost: resultMsg.cost?.total_cost ?? 0
     };
   }
@@ -189,7 +201,9 @@ export class ResponseParser {
   /**
    * Stream messages with a callback (doesn't consume for other methods)
    */
-  async stream(callback: (message: Message) => void | Promise<void>): Promise<void> {
+  async stream(
+    callback: (message: Message) => void | Promise<void>
+  ): Promise<void> {
     for await (const message of this.generator) {
       // Run handlers
       for (const handler of this.handlers) {
@@ -216,12 +230,14 @@ export class ResponseParser {
   async succeeded(): Promise<boolean> {
     await this.consume();
 
-    const resultMsg = this.messages.findLast((msg): msg is ResultMessage => msg.type === 'result');
+    const resultMsg = this.messages.findLast(
+      (msg): msg is ResultMessage => msg.type === 'result'
+    );
     if (!resultMsg) return false;
 
     // Check if any tool execution failed
     const executions = await this.asToolExecutions();
-    const hasErrors = executions.some(exec => exec.isError);
+    const hasErrors = executions.some((exec) => exec.isError);
 
     return !hasErrors;
   }

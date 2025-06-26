@@ -21,7 +21,10 @@ describe('ResponseParser', () => {
     it('should extract all messages as array', async () => {
       messages = [
         { type: 'user', content: 'Hello' },
-        { type: 'assistant', content: [{ type: 'text', text: 'Hi there!' }] },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Hi there!' }]
+        },
         { type: 'result', content: 'Done' }
       ];
 
@@ -36,14 +39,23 @@ describe('ResponseParser', () => {
 
     it('should extract text from assistant messages', async () => {
       messages = [
-        { type: 'assistant', content: [{ type: 'text', text: 'First part' }] },
-        { type: 'assistant', content: [{ type: 'text', text: 'Second part' }] },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'First part' }]
+        },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Second part' }]
+        },
         { type: 'user', content: 'Ignored' },
-        { type: 'assistant', content: [
-          { type: 'text', text: 'Third part' },
-          { type: 'tool_use', id: '1', name: 'Test', input: {} },
-          { type: 'text', text: 'Fourth part' }
-        ]}
+        {
+          type: 'assistant',
+          content: [
+            { type: 'text', text: 'Third part' },
+            { type: 'tool_use', id: '1', name: 'Test', input: {} },
+            { type: 'text', text: 'Fourth part' }
+          ]
+        }
       ];
 
       const parser = new ResponseParser(mockGenerator());
@@ -56,7 +68,10 @@ describe('ResponseParser', () => {
       messages = [
         { type: 'user', content: 'Do something' },
         { type: 'result', content: 'First result' },
-        { type: 'assistant', content: [{ type: 'text', text: 'Working...' }] },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Working...' }]
+        },
         { type: 'result', content: 'Final result' }
       ];
 
@@ -86,8 +101,17 @@ describe('ResponseParser', () => {
           type: 'assistant',
           content: [
             { type: 'text', text: 'Let me read that file' },
-            { type: 'tool_use', id: 'tool-1', name: 'Read', input: { path: 'test.txt' } },
-            { type: 'tool_result', tool_use_id: 'tool-1', content: 'File contents' }
+            {
+              type: 'tool_use',
+              id: 'tool-1',
+              name: 'Read',
+              input: { path: 'test.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-1',
+              content: 'File contents'
+            }
           ]
         }
       ];
@@ -109,8 +133,18 @@ describe('ResponseParser', () => {
         {
           type: 'assistant',
           content: [
-            { type: 'tool_use', id: 'tool-1', name: 'Write', input: { path: '/invalid' } },
-            { type: 'tool_result', tool_use_id: 'tool-1', content: 'Permission denied', is_error: true }
+            {
+              type: 'tool_use',
+              id: 'tool-1',
+              name: 'Write',
+              input: { path: '/invalid' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: 'tool-1',
+              content: 'Permission denied',
+              is_error: true
+            }
           ]
         }
       ];
@@ -127,12 +161,39 @@ describe('ResponseParser', () => {
         {
           type: 'assistant',
           content: [
-            { type: 'tool_use', id: '1', name: 'Read', input: { path: 'a.txt' } },
-            { type: 'tool_result', tool_use_id: '1', content: 'Content A' },
-            { type: 'tool_use', id: '2', name: 'Write', input: { path: 'b.txt' } },
-            { type: 'tool_result', tool_use_id: '2', content: 'Written' },
-            { type: 'tool_use', id: '3', name: 'Read', input: { path: 'c.txt' } },
-            { type: 'tool_result', tool_use_id: '3', content: 'Content C' }
+            {
+              type: 'tool_use',
+              id: '1',
+              name: 'Read',
+              input: { path: 'a.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '1',
+              content: 'Content A'
+            },
+            {
+              type: 'tool_use',
+              id: '2',
+              name: 'Write',
+              input: { path: 'b.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '2',
+              content: 'Written'
+            },
+            {
+              type: 'tool_use',
+              id: '3',
+              name: 'Read',
+              input: { path: 'c.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '3',
+              content: 'Content C'
+            }
           ]
         }
       ];
@@ -149,10 +210,28 @@ describe('ResponseParser', () => {
         {
           type: 'assistant',
           content: [
-            { type: 'tool_use', id: '1', name: 'Read', input: { path: 'a.txt' } },
-            { type: 'tool_result', tool_use_id: '1', content: 'First' },
-            { type: 'tool_use', id: '2', name: 'Read', input: { path: 'b.txt' } },
-            { type: 'tool_result', tool_use_id: '2', content: 'Second' }
+            {
+              type: 'tool_use',
+              id: '1',
+              name: 'Read',
+              input: { path: 'a.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '1',
+              content: 'First'
+            },
+            {
+              type: 'tool_use',
+              id: '2',
+              name: 'Read',
+              input: { path: 'b.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '2',
+              content: 'Second'
+            }
           ]
         }
       ];
@@ -168,10 +247,29 @@ describe('ResponseParser', () => {
         {
           type: 'assistant',
           content: [
-            { type: 'tool_use', id: '1', name: 'Read', input: { path: 'a.txt' } },
-            { type: 'tool_result', tool_use_id: '1', content: 'Success' },
-            { type: 'tool_use', id: '2', name: 'Read', input: { path: 'b.txt' } },
-            { type: 'tool_result', tool_use_id: '2', content: 'Error', is_error: true }
+            {
+              type: 'tool_use',
+              id: '1',
+              name: 'Read',
+              input: { path: 'a.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '1',
+              content: 'Success'
+            },
+            {
+              type: 'tool_use',
+              id: '2',
+              name: 'Read',
+              input: { path: 'b.txt' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '2',
+              content: 'Error',
+              is_error: true
+            }
           ]
         }
       ];
@@ -189,10 +287,12 @@ describe('ResponseParser', () => {
       messages = [
         {
           type: 'assistant',
-          content: [{
-            type: 'text',
-            text: 'Here is the data:\n```json\n{"name": "Test", "value": 42}\n```'
-          }]
+          content: [
+            {
+              type: 'text',
+              text: 'Here is the data:\n```json\n{"name": "Test", "value": 42}\n```'
+            }
+          ]
         }
       ];
 
@@ -220,10 +320,12 @@ describe('ResponseParser', () => {
       messages = [
         {
           type: 'assistant',
-          content: [{
-            type: 'text',
-            text: 'The result is {"status": "ok", "data": [1,2,3]} as requested.'
-          }]
+          content: [
+            {
+              type: 'text',
+              text: 'The result is {"status": "ok", "data": [1,2,3]} as requested.'
+            }
+          ]
         }
       ];
 
@@ -294,9 +396,7 @@ describe('ResponseParser', () => {
     });
 
     it('should handle missing usage data', async () => {
-      messages = [
-        { type: 'result', content: 'Done' }
-      ];
+      messages = [{ type: 'result', content: 'Done' }];
 
       const parser = new ResponseParser(mockGenerator());
       const usage = await parser.getUsage();
@@ -333,32 +433,42 @@ describe('ResponseParser', () => {
     it('should stream messages with callback', async () => {
       messages = [
         { type: 'user', content: 'Start' },
-        { type: 'assistant', content: [{ type: 'text', text: 'Processing' }] },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Processing' }]
+        },
         { type: 'result', content: 'Done' }
       ];
 
       const received: Message[] = [];
       const parser = new ResponseParser(mockGenerator());
-      
+
       await parser.stream(async (msg) => {
         received.push(msg);
       });
 
       expect(received).toHaveLength(3);
-      expect(received.map(m => m.type)).toEqual(['user', 'assistant', 'result']);
+      expect(received.map((m) => m.type)).toEqual([
+        'user',
+        'assistant',
+        'result'
+      ]);
     });
 
     it('should allow async callbacks', async () => {
       messages = [
-        { type: 'assistant', content: [{ type: 'text', text: 'Test' }] }
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Test' }]
+        }
       ];
 
       const delays: number[] = [];
       const parser = new ResponseParser(mockGenerator());
-      
+
       await parser.stream(async (_msg) => {
         const start = Date.now();
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         delays.push(Date.now() - start);
       });
 
@@ -368,11 +478,14 @@ describe('ResponseParser', () => {
     it('should run handlers during streaming', async () => {
       const handler = vi.fn();
       messages = [
-        { type: 'assistant', content: [{ type: 'text', text: 'Test' }] }
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Test' }]
+        }
       ];
 
       const parser = new ResponseParser(mockGenerator(), [handler]);
-      
+
       await parser.stream(async () => {});
 
       expect(handler).toHaveBeenCalledWith(messages[0]);
@@ -381,9 +494,7 @@ describe('ResponseParser', () => {
 
   describe('Error Handling', () => {
     it('should check success status', async () => {
-      messages = [
-        { type: 'result', content: 'Success' }
-      ];
+      messages = [{ type: 'result', content: 'Success' }];
 
       const parser = new ResponseParser(mockGenerator());
       const success = await parser.succeeded();
@@ -397,7 +508,12 @@ describe('ResponseParser', () => {
           type: 'assistant',
           content: [
             { type: 'tool_use', id: '1', name: 'Write', input: {} },
-            { type: 'tool_result', tool_use_id: '1', content: 'Error', is_error: true }
+            {
+              type: 'tool_result',
+              tool_use_id: '1',
+              content: 'Error',
+              is_error: true
+            }
           ]
         },
         { type: 'result', content: 'Done' }
@@ -411,12 +527,21 @@ describe('ResponseParser', () => {
 
     it('should extract error messages', async () => {
       messages = [
-        { type: 'system', subtype: 'error', data: { message: 'System error occurred' } },
+        {
+          type: 'system',
+          subtype: 'error',
+          data: { message: 'System error occurred' }
+        },
         {
           type: 'assistant',
           content: [
             { type: 'tool_use', id: '1', name: 'Read', input: {} },
-            { type: 'tool_result', tool_use_id: '1', content: 'File not found', is_error: true }
+            {
+              type: 'tool_result',
+              tool_use_id: '1',
+              content: 'File not found',
+              is_error: true
+            }
           ]
         }
       ];
@@ -430,16 +555,25 @@ describe('ResponseParser', () => {
     });
 
     it('should handle handler errors gracefully', async () => {
-      const errorHandler = vi.fn(() => { throw new Error('Handler failed'); });
+      const errorHandler = vi.fn(() => {
+        throw new Error('Handler failed');
+      });
       const logger = new ConsoleLogger();
       const errorSpy = vi.spyOn(logger, 'error');
-      
+
       messages = [{ type: 'user', content: 'Test' }];
 
-      const parser = new ResponseParser(mockGenerator(), [errorHandler], logger);
+      const parser = new ResponseParser(
+        mockGenerator(),
+        [errorHandler],
+        logger
+      );
       await parser.asArray();
 
-      expect(errorSpy).toHaveBeenCalledWith('Message handler error', expect.any(Object));
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Message handler error',
+        expect.any(Object)
+      );
     });
   });
 
@@ -447,13 +581,16 @@ describe('ResponseParser', () => {
     it('should apply custom transformer', async () => {
       messages = [
         { type: 'user', content: 'Question' },
-        { type: 'assistant', content: [{ type: 'text', text: 'Answer' }] }
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Answer' }]
+        }
       ];
 
       const parser = new ResponseParser(mockGenerator());
-      const result = await parser.transform(msgs => ({
-        questionCount: msgs.filter(m => m.type === 'user').length,
-        answerCount: msgs.filter(m => m.type === 'assistant').length,
+      const result = await parser.transform((msgs) => ({
+        questionCount: msgs.filter((m) => m.type === 'user').length,
+        answerCount: msgs.filter((m) => m.type === 'assistant').length,
         totalMessages: msgs.length
       }));
 
@@ -474,7 +611,7 @@ describe('ResponseParser', () => {
       };
 
       const parser = new ResponseParser(countingGenerator());
-      
+
       // Multiple calls should reuse cached messages
       await parser.asText();
       await parser.asResult();
@@ -485,11 +622,14 @@ describe('ResponseParser', () => {
 
     it('should return same results on multiple calls', async () => {
       messages = [
-        { type: 'assistant', content: [{ type: 'text', text: 'Test message' }] }
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Test message' }]
+        }
       ];
 
       const parser = new ResponseParser(mockGenerator());
-      
+
       const text1 = await parser.asText();
       const text2 = await parser.asText();
 
@@ -501,7 +641,7 @@ describe('ResponseParser', () => {
     it('should log consumption process', async () => {
       const logger = new ConsoleLogger();
       const debugSpy = vi.spyOn(logger, 'debug');
-      
+
       messages = [
         { type: 'user', content: 'Test' },
         { type: 'result', content: 'Done' }
@@ -511,9 +651,15 @@ describe('ResponseParser', () => {
       await parser.asArray();
 
       expect(debugSpy).toHaveBeenCalledWith('Consuming message generator');
-      expect(debugSpy).toHaveBeenCalledWith('Received message', { type: 'user' });
-      expect(debugSpy).toHaveBeenCalledWith('Received message', { type: 'result' });
-      expect(debugSpy).toHaveBeenCalledWith('Message generator consumed', { messageCount: 2 });
+      expect(debugSpy).toHaveBeenCalledWith('Received message', {
+        type: 'user'
+      });
+      expect(debugSpy).toHaveBeenCalledWith('Received message', {
+        type: 'result'
+      });
+      expect(debugSpy).toHaveBeenCalledWith('Message generator consumed', {
+        messageCount: 2
+      });
     });
   });
 });

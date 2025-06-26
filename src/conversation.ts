@@ -1,12 +1,19 @@
 import { InternalClient } from './_internal/client.js';
 import { ResponseParser } from './parser.js';
-import type { ClaudeCodeOptions, Message, TextBlock, UserMessage } from './types.js';
+import type {
+  ClaudeCodeOptions,
+  Message,
+  TextBlock,
+  UserMessage
+} from './types.js';
 import type { Logger } from './logger.js';
 
 /**
  * Convert flexible input types to UserMessage content
  */
-function normalizeUserContent(input: string | TextBlock | TextBlock[]): string | Array<TextBlock | unknown> {
+function normalizeUserContent(
+  input: string | TextBlock | TextBlock[]
+): string | Array<TextBlock | unknown> {
   if (typeof input === 'string') {
     return [{ type: 'text', text: input }];
   }
@@ -37,7 +44,10 @@ class SessionAwareParser extends ResponseParser {
     this.logger?.debug('Consuming message generator with session tracking');
 
     for await (const message of this.generator) {
-      this.logger?.debug('Received message', { type: message.type, sessionId: message.session_id });
+      this.logger?.debug('Received message', {
+        type: message.type,
+        sessionId: message.session_id
+      });
 
       // Update session ID when received
       if (message.session_id) {
@@ -65,7 +75,9 @@ class SessionAwareParser extends ResponseParser {
     });
   }
 
-  async stream(callback: (message: Message) => void | Promise<void>): Promise<void> {
+  async stream(
+    callback: (message: Message) => void | Promise<void>
+  ): Promise<void> {
     for await (const message of this.generator) {
       // Update session ID when received
       if (message.session_id) {
@@ -132,13 +144,19 @@ export class Conversation {
   private activeClient?: InternalClient;
   private options: ClaudeCodeOptions;
   private currentSessionId: string | null = null;
-  private streamHandlers: Array<(message: Message, sessionId: string | null) => void | Promise<void>> = [];
+  private streamHandlers: Array<
+    (message: Message, sessionId: string | null) => void | Promise<void>
+  > = [];
   private sessionIdHandlers: Array<(sessionId: string | null) => void> = [];
   private logger?: Logger;
   private disposed = false;
   private _keepAlive: boolean;
 
-  constructor(options: ClaudeCodeOptions, logger?: Logger, keepAlive: boolean = false) {
+  constructor(
+    options: ClaudeCodeOptions,
+    logger?: Logger,
+    keepAlive: boolean = false
+  ) {
     this.options = { ...options };
     this.currentSessionId = options.sessionId || null; // Get from QueryBuilder options
     this.logger = logger;
@@ -154,7 +172,10 @@ export class Conversation {
       throw new Error('Conversation has been disposed');
     }
 
-    this.logger?.info('Starting conversation query', { prompt, sessionId: this.currentSessionId });
+    this.logger?.info('Starting conversation query', {
+      prompt,
+      sessionId: this.currentSessionId
+    });
 
     // Create internal client to process the query with streaming mode enabled
     const client = new InternalClient(
@@ -175,10 +196,10 @@ export class Conversation {
       client.processQuery(),
       [],
       this.logger,
-      newSessionId => {
+      (newSessionId) => {
         this.updateSessionId(newSessionId);
       },
-      message => this.emitMessage(message),
+      (message) => this.emitMessage(message),
       client
     );
 
@@ -205,7 +226,9 @@ export class Conversation {
     const hasActiveTransport = this.activeClient?.hasActiveTransport() ?? false;
 
     const messagePreview =
-      typeof input === 'string' ? input.substring(0, 50) + (input.length > 50 ? '...' : '') : '[TextBlock content]';
+      typeof input === 'string'
+        ? input.substring(0, 50) + (input.length > 50 ? '...' : '')
+        : '[TextBlock content]';
 
     this.logger?.debug('Sending streaming input', {
       message: messagePreview,
@@ -217,13 +240,19 @@ export class Conversation {
     try {
       if (this.activeClient?.hasActiveTransport()) {
         // Send to active process
-        this.logger?.debug('Found active transport - writing to stdin of existing process');
+        this.logger?.debug(
+          'Found active transport - writing to stdin of existing process'
+        );
         await this.activeClient.sendStreamingInput(userMessage);
-        this.logger?.debug('Successfully sent streaming input to active process stdin');
+        this.logger?.debug(
+          'Successfully sent streaming input to active process stdin'
+        );
       } else {
         // Start new client for fire-and-forget message processing
         this.logger?.debug('No active transport available', {
-          reason: hasActiveClient ? 'client exists but transport inactive' : 'no active client',
+          reason: hasActiveClient
+            ? 'client exists but transport inactive'
+            : 'no active client',
           willSpawnNewProcess: true
         });
 
@@ -232,7 +261,11 @@ export class Conversation {
           typeof input === 'string'
             ? input
             : Array.isArray(input)
-              ? input.map(block => (block.type === 'text' ? block.text : '[non-text]')).join(' ')
+              ? input
+                  .map((block) =>
+                    block.type === 'text' ? block.text : '[non-text]'
+                  )
+                  .join(' ')
               : input.type === 'text'
                 ? input.text
                 : '[non-text]';
@@ -271,7 +304,12 @@ export class Conversation {
    * Observe all conversation activity (stateless event registration)
    * Returns unsubscribe function
    */
-  stream(handler: (message: Message, sessionId: string | null) => void | Promise<void>): () => void {
+  stream(
+    handler: (
+      message: Message,
+      sessionId: string | null
+    ) => void | Promise<void>
+  ): () => void {
     if (this.disposed) {
       throw new Error('Conversation has been disposed');
     }
@@ -345,7 +383,9 @@ export class Conversation {
   async dispose(): Promise<void> {
     if (this.disposed) return;
 
-    this.logger?.debug('Disposing conversation', { sessionId: this.currentSessionId });
+    this.logger?.debug('Disposing conversation', {
+      sessionId: this.currentSessionId
+    });
 
     // Clean up active client
     if (this.activeClient) {
@@ -410,10 +450,13 @@ export class Conversation {
       throw new Error('Conversation has been disposed');
     }
 
-    this.logger?.debug('Ending conversation - closing stdin of active process', {
-      hasActiveClient: !!this.activeClient,
-      hasActiveTransport: this.activeClient?.hasActiveTransport() ?? false
-    });
+    this.logger?.debug(
+      'Ending conversation - closing stdin of active process',
+      {
+        hasActiveClient: !!this.activeClient,
+        hasActiveTransport: this.activeClient?.hasActiveTransport() ?? false
+      }
+    );
 
     if (this.activeClient?.hasActiveTransport()) {
       this.activeClient.closeStdin();

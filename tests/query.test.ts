@@ -21,7 +21,7 @@ describe('query function exports', () => {
     const result1 = query('test prompt');
     const result2 = query('test prompt', {});
     const result3 = query('test prompt', { model: 'claude-3' });
-    
+
     expect(result1).toBeDefined();
     expect(result2).toBeDefined();
     expect(result3).toBeDefined();
@@ -40,7 +40,7 @@ describe('exports', () => {
   it('should export all type definitions', () => {
     // Check that types namespace is exported
     expect(types).toBeDefined();
-    
+
     // The actual type checking is done by TypeScript
     // This test ensures the module structure is correct
   });

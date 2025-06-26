@@ -36,7 +36,10 @@ import type { ClaudeCodeOptions, Message } from './types.js';
  * }
  * ```
  */
-export async function* query(prompt: string, options?: ClaudeCodeOptions): AsyncGenerator<Message> {
+export async function* query(
+  prompt: string,
+  options?: ClaudeCodeOptions
+): AsyncGenerator<Message> {
   const client = new InternalClient(prompt, options);
   yield* client.processQuery();
 }
@@ -47,6 +50,18 @@ export * from './errors.js';
 
 // Export new fluent API (backward compatible - original query function still available)
 export { claude, QueryBuilder } from './fluent.js';
-export { ResponseParser, type ToolExecution, type UsageStats } from './parser.js';
+export {
+  ResponseParser,
+  type ToolExecution,
+  type UsageStats
+} from './parser.js';
 export { Conversation } from './conversation.js';
-export { Logger, LogLevel, ConsoleLogger, JSONLogger, MultiLogger, NullLogger, type LogEntry } from './logger.js';
+export {
+  Logger,
+  LogLevel,
+  ConsoleLogger,
+  JSONLogger,
+  MultiLogger,
+  NullLogger,
+  type LogEntry
+} from './logger.js';

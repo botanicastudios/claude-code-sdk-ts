@@ -75,10 +75,10 @@ describe('Logger Implementations', () => {
 
       logger.info('User action', { userId: 123, action: 'login' });
 
-      expect(console.info).toHaveBeenCalledWith(
-        expect.any(String),
-        { userId: 123, action: 'login' }
-      );
+      expect(console.info).toHaveBeenCalledWith(expect.any(String), {
+        userId: 123,
+        action: 'login'
+      });
     });
 
     it('should extract error from context', () => {
@@ -102,11 +102,13 @@ describe('Logger Implementations', () => {
 
       const afterTime = new Date().toISOString();
       const call = vi.mocked(console.info).mock.calls[0]?.[0] as string;
-      
+
       // Extract timestamp from log message
-      const timestampMatch = call.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/);
+      const timestampMatch = call.match(
+        /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/
+      );
       expect(timestampMatch).toBeTruthy();
-      
+
       const timestamp = timestampMatch![1] as string;
       expect(timestamp >= beforeTime).toBe(true);
       expect(timestamp <= afterTime).toBe(true);
@@ -125,7 +127,9 @@ describe('Logger Implementations', () => {
 
       expect(console.info).toHaveBeenCalledWith(
         expect.stringContaining('Direct log'),
-        { test: true }
+        {
+          test: true
+        }
       );
     });
   });
@@ -139,7 +143,7 @@ describe('Logger Implementations', () => {
 
       expect(output).toHaveBeenCalledTimes(1);
       const json = JSON.parse(output.mock.calls[0][0]);
-      
+
       expect(json).toMatchObject({
         level: 'INFO',
         message: 'Test message',
@@ -178,7 +182,11 @@ describe('Logger Implementations', () => {
       const output = vi.fn();
       const logger = new JSONLogger(LogLevel.INFO, output);
 
-      logger.info('Action', { user: 'alice', action: 'login', timestamp: 123 });
+      logger.info('Action', {
+        user: 'alice',
+        action: 'login',
+        timestamp: 123
+      });
 
       const json = JSON.parse(output.mock.calls[0][0]);
       expect(json).toMatchObject({
@@ -186,7 +194,7 @@ describe('Logger Implementations', () => {
         message: 'Action',
         user: 'alice',
         action: 'login',
-        timestamp: 123  // Context values are merged in
+        timestamp: 123 // Context values are merged in
       });
     });
 
@@ -195,7 +203,9 @@ describe('Logger Implementations', () => {
 
       logger.info('Test');
 
-      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('"level":"INFO"'));
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('"level":"INFO"')
+      );
     });
   });
 
@@ -230,14 +240,14 @@ describe('Logger Implementations', () => {
       };
 
       const multi = new MultiLogger([logger1, logger2]);
-      
+
       multi.error('Error');
       multi.warn('Warn');
       multi.info('Info');
       multi.debug('Debug');
       multi.trace('Trace');
 
-      Object.values(spies).forEach(spy => {
+      Object.values(spies).forEach((spy) => {
         expect(spy).toHaveBeenCalledTimes(1);
       });
     });
@@ -263,7 +273,7 @@ describe('Logger Implementations', () => {
 
     it('should handle empty logger array', () => {
       const multi = new MultiLogger([]);
-      
+
       // Should not throw
       expect(() => {
         multi.info('Test');
@@ -272,18 +282,30 @@ describe('Logger Implementations', () => {
 
     it('should continue if one logger throws', () => {
       const errorLogger = {
-        log: vi.fn(() => { throw new Error('Logger failed'); }),
-        error: vi.fn(() => { throw new Error('Logger failed'); }),
-        warn: vi.fn(() => { throw new Error('Logger failed'); }),
-        info: vi.fn(() => { throw new Error('Logger failed'); }),
-        debug: vi.fn(() => { throw new Error('Logger failed'); }),
-        trace: vi.fn(() => { throw new Error('Logger failed'); })
+        log: vi.fn(() => {
+          throw new Error('Logger failed');
+        }),
+        error: vi.fn(() => {
+          throw new Error('Logger failed');
+        }),
+        warn: vi.fn(() => {
+          throw new Error('Logger failed');
+        }),
+        info: vi.fn(() => {
+          throw new Error('Logger failed');
+        }),
+        debug: vi.fn(() => {
+          throw new Error('Logger failed');
+        }),
+        trace: vi.fn(() => {
+          throw new Error('Logger failed');
+        })
       };
       const workingLogger = new NullLogger();
       const spy = vi.spyOn(workingLogger, 'info');
 
       const multi = new MultiLogger([errorLogger, workingLogger]);
-      
+
       // Should not throw and should call second logger
       expect(() => multi.info('Test')).not.toThrow();
       expect(spy).toHaveBeenCalledWith('Test', undefined);
@@ -356,7 +378,7 @@ describe('Logger Implementations', () => {
         new NullLogger()
       ];
 
-      loggers.forEach(logger => {
+      loggers.forEach((logger) => {
         expect(typeof logger.log).toBe('function');
         expect(typeof logger.error).toBe('function');
         expect(typeof logger.warn).toBe('function');

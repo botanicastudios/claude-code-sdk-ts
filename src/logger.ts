@@ -22,7 +22,7 @@ export interface LogEntry {
 
 /**
  * Logger interface for pluggable logging
- * 
+ *
  * @example
  * ```typescript
  * class CustomLogger implements Logger {
@@ -30,7 +30,7 @@ export interface LogEntry {
  *     // Send to your logging service
  *   }
  * }
- * 
+ *
  * const result = await claude()
  *   .withLogger(new CustomLogger())
  *   .query('Hello');
@@ -67,13 +67,13 @@ export class ConsoleLogger implements Logger {
     const timestamp = entry.timestamp.toISOString();
     const level = LogLevel[entry.level];
     const prefix = `${timestamp} ${this.prefix} ${level}`;
-    
+
     const args: any[] = [`${prefix}: ${entry.message}`];
-    
+
     if (entry.context && Object.keys(entry.context).length > 0) {
       args.push(entry.context);
     }
-    
+
     if (entry.error) {
       args.push(entry.error);
     }

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SubprocessCLITransport } from '../src/_internal/transport/subprocess-cli.js';
-import { CLIConnectionError, CLINotFoundError, CLIJSONDecodeError } from '../src/errors.js';
+import {
+  CLIConnectionError,
+  CLINotFoundError,
+  CLIJSONDecodeError
+} from '../src/errors.js';
 import { execa } from 'execa';
 import which from 'which';
 import { Readable } from 'node:stream';
@@ -28,7 +32,7 @@ describe('SubprocessCLITransport', () => {
       stderr: new Readable({ read() {} }),
       stdin: stdinStream,
       cancel: vi.fn(),
-      then: vi.fn(onfulfilled => {
+      then: vi.fn((onfulfilled) => {
         // Simulate successful process completion
         if (onfulfilled) onfulfilled({ exitCode: 0 });
         return Promise.resolve({ exitCode: 0 });
@@ -60,7 +64,9 @@ describe('SubprocessCLITransport', () => {
       const transport = new SubprocessCLITransport('test prompt');
       await transport.connect();
 
-      expect(execa).toHaveBeenCalledWith('/usr/local/bin/claude-code', ['--version']);
+      expect(execa).toHaveBeenCalledWith('/usr/local/bin/claude-code', [
+        '--version'
+      ]);
     });
 
     it('should throw CLINotFoundError when CLI not found anywhere', async () => {
@@ -105,7 +111,10 @@ describe('SubprocessCLITransport', () => {
         deniedTools: ['WebSearch'] as any,
         permissionMode: 'acceptEdits' as any,
         context: ['file1.txt', 'file2.txt'],
-        mcpServers: [{ command: 'server1', args: ['--port', '3000'] }, { command: 'server2' }]
+        mcpServers: [
+          { command: 'server1', args: ['--port', '3000'] },
+          { command: 'server2' }
+        ]
       };
 
       const transport = new SubprocessCLITransport('test prompt', options);
@@ -146,7 +155,11 @@ describe('SubprocessCLITransport', () => {
         'server2'
       ];
 
-      expect(execa).toHaveBeenCalledWith('/usr/local/bin/claude-code', expectedArgs, expect.any(Object));
+      expect(execa).toHaveBeenCalledWith(
+        '/usr/local/bin/claude-code',
+        expectedArgs,
+        expect.any(Object)
+      );
     });
 
     it('should include --add-dir flag when addDirectories is provided', async () => {
@@ -162,7 +175,10 @@ describe('SubprocessCLITransport', () => {
 
       expect(execa).toHaveBeenCalledWith(
         '/usr/local/bin/claude-code',
-        expect.arrayContaining(['--add-dir', '/Users/toby/Code/workspace /tmp']),
+        expect.arrayContaining([
+          '--add-dir',
+          '/Users/toby/Code/workspace /tmp'
+        ]),
         expect.any(Object)
       );
     });
@@ -181,6 +197,90 @@ describe('SubprocessCLITransport', () => {
       expect(execa).toHaveBeenCalledWith(
         '/usr/local/bin/claude-code',
         expect.arrayContaining(['--add-dir', '/single/directory']),
+        expect.any(Object)
+      );
+    });
+
+    it('should include --max-turns flag when maxTurns is provided', async () => {
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(execa).mockReturnValue(mockProcess as any);
+
+      const options = {
+        maxTurns: 5
+      };
+
+      const transport = new SubprocessCLITransport('test prompt', options);
+      await transport.connect();
+
+      expect(execa).toHaveBeenCalledWith(
+        '/usr/local/bin/claude-code',
+        expect.arrayContaining(['--max-turns', '5']),
+        expect.any(Object)
+      );
+    });
+
+    it('should include --system flag when systemPrompt is provided', async () => {
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(execa).mockReturnValue(mockProcess as any);
+
+      const options = {
+        systemPrompt: 'You are a helpful assistant.'
+      };
+
+      const transport = new SubprocessCLITransport('test prompt', options);
+      await transport.connect();
+
+      expect(execa).toHaveBeenCalledWith(
+        '/usr/local/bin/claude-code',
+        expect.arrayContaining(['--system', 'You are a helpful assistant.']),
+        expect.any(Object)
+      );
+    });
+
+    it('should include --append-system-prompt flag when appendSystemPrompt is provided', async () => {
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(execa).mockReturnValue(mockProcess as any);
+
+      const options = {
+        appendSystemPrompt: 'Always be concise.'
+      };
+
+      const transport = new SubprocessCLITransport('test prompt', options);
+      await transport.connect();
+
+      expect(execa).toHaveBeenCalledWith(
+        '/usr/local/bin/claude-code',
+        expect.arrayContaining([
+          '--append-system-prompt',
+          'Always be concise.'
+        ]),
+        expect.any(Object)
+      );
+    });
+
+    it('should include all new flags together', async () => {
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(execa).mockReturnValue(mockProcess as any);
+
+      const options = {
+        maxTurns: 3,
+        systemPrompt: 'You are a helpful assistant.',
+        appendSystemPrompt: 'Always be concise.'
+      };
+
+      const transport = new SubprocessCLITransport('test prompt', options);
+      await transport.connect();
+
+      expect(execa).toHaveBeenCalledWith(
+        '/usr/local/bin/claude-code',
+        expect.arrayContaining([
+          '--max-turns',
+          '3',
+          '--system',
+          'You are a helpful assistant.',
+          '--append-system-prompt',
+          'Always be concise.'
+        ]),
         expect.any(Object)
       );
     });
@@ -229,14 +329,17 @@ describe('SubprocessCLITransport', () => {
         { type: 'message', data: { type: 'user', content: 'Hello' } },
         {
           type: 'message',
-          data: { type: 'assistant', content: [{ type: 'text', text: 'Hi!' }] }
+          data: {
+            type: 'assistant',
+            content: [{ type: 'text', text: 'Hi!' }]
+          }
         },
         { type: 'end' }
       ];
 
       // Emit messages to stdout
       setTimeout(() => {
-        messages.forEach(msg => {
+        messages.forEach((msg) => {
           stdoutStream.push(JSON.stringify(msg) + '\n');
         });
         stdoutStream.push(null); // End stream

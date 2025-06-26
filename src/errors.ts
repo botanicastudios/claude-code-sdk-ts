@@ -18,7 +18,9 @@ export class CLIConnectionError extends ClaudeSDKError {
 
 // Error when Claude Code CLI is not found
 export class CLINotFoundError extends ClaudeSDKError {
-  constructor(message: string = 'Claude Code CLI not found. Please install it from https://github.com/anthropics/claude-code') {
+  constructor(
+    message: string = 'Claude Code CLI not found. Please install it from https://github.com/anthropics/claude-code'
+  ) {
     super(message);
     this.name = 'CLINotFoundError';
     Object.setPrototypeOf(this, CLINotFoundError.prototype);

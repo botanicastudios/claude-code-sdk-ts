@@ -8,7 +8,11 @@ export class InternalClient {
   private transport?: SubprocessCLITransport;
   private streamingMode: boolean;
 
-  constructor(prompt: string, options: ClaudeCodeOptions = {}, streamingMode: boolean = false) {
+  constructor(
+    prompt: string,
+    options: ClaudeCodeOptions = {},
+    streamingMode: boolean = false
+  ) {
     this.prompt = prompt;
     this.options = options;
     this.streamingMode = streamingMode;
@@ -29,7 +33,12 @@ export class InternalClient {
   }
 
   async *processQuery(): AsyncGenerator<Message> {
-    this.transport = new SubprocessCLITransport(this.prompt, this.options, this.streamingMode, this.options.keepAlive);
+    this.transport = new SubprocessCLITransport(
+      this.prompt,
+      this.options,
+      this.streamingMode,
+      this.options.keepAlive
+    );
 
     try {
       await this.transport.connect();
@@ -59,9 +68,15 @@ export class InternalClient {
     }
 
     const messagePreview =
-      typeof userMessage.content === 'string' ? userMessage.content.substring(0, 50) + '...' : '[content blocks]';
+      typeof userMessage.content === 'string'
+        ? userMessage.content.substring(0, 50) + '...'
+        : '[content blocks]';
 
-    this.options.debug && console.error('DEBUG: Sending streaming input to active transport:', messagePreview);
+    this.options.debug &&
+      console.error(
+        'DEBUG: Sending streaming input to active transport:',
+        messagePreview
+      );
 
     const jsonlMessage = {
       type: 'user',
@@ -72,11 +87,15 @@ export class InternalClient {
     };
 
     this.options.debug &&
-      console.error('DEBUG: Writing JSONL to stdin:', JSON.stringify(jsonlMessage).substring(0, 100) + '...');
+      console.error(
+        'DEBUG: Writing JSONL to stdin:',
+        JSON.stringify(jsonlMessage).substring(0, 100) + '...'
+      );
 
     this.transport.writeToStdin(JSON.stringify(jsonlMessage) + '\n');
 
-    this.options.debug && console.error('DEBUG: Successfully wrote JSONL message to stdin');
+    this.options.debug &&
+      console.error('DEBUG: Successfully wrote JSONL message to stdin');
   }
 
   /**
@@ -141,7 +160,9 @@ export class InternalClient {
         };
 
       case 'error':
-        throw new ClaudeSDKError(`CLI error: ${output.error?.message || 'Unknown error'}`);
+        throw new ClaudeSDKError(
+          `CLI error: ${output.error?.message || 'Unknown error'}`
+        );
 
       default:
         // Skip unknown message types

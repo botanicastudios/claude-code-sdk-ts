@@ -36,7 +36,13 @@ describe('InternalClient', () => {
     it('should connect to transport and yield messages', async () => {
       const messages: CLIOutput[] = [
         { type: 'message', data: { type: 'user', content: 'Hello' } },
-        { type: 'message', data: { type: 'assistant', content: [{ type: 'text', text: 'Hi there!' }] } },
+        {
+          type: 'message',
+          data: {
+            type: 'assistant',
+            content: [{ type: 'text', text: 'Hi there!' }]
+          }
+        },
         { type: 'end' }
       ];
 
@@ -57,7 +63,10 @@ describe('InternalClient', () => {
       expect(mockTransport.disconnect).toHaveBeenCalledTimes(1);
       expect(results).toHaveLength(2);
       expect(results[0]).toEqual({ type: 'user', content: 'Hello' });
-      expect(results[1]).toEqual({ type: 'assistant', content: [{ type: 'text', text: 'Hi there!' }] });
+      expect(results[1]).toEqual({
+        type: 'assistant',
+        content: [{ type: 'text', text: 'Hi there!' }]
+      });
     });
 
     it('should handle errors from transport', async () => {
@@ -77,7 +86,7 @@ describe('InternalClient', () => {
           // Should throw before yielding
         }
       }).rejects.toThrow(ClaudeSDKError);
-      
+
       expect(mockTransport.disconnect).toHaveBeenCalledTimes(1);
     });
 
@@ -130,11 +139,17 @@ describe('InternalClient', () => {
     });
 
     it('should handle unknown message types gracefully', async () => {
-      const unknownMessage = { type: 'unknown', data: 'some data' } as any;
+      const unknownMessage = {
+        type: 'unknown',
+        data: 'some data'
+      } as any;
 
       mockTransport.receiveMessages.mockImplementation(async function* () {
         yield unknownMessage;
-        yield { type: 'message', data: { type: 'user', content: 'Hello' } };
+        yield {
+          type: 'message',
+          data: { type: 'user', content: 'Hello' }
+        };
         yield { type: 'end' };
       });
 
@@ -146,7 +161,10 @@ describe('InternalClient', () => {
         results.push(message);
       }
 
-      expect(warnSpy).toHaveBeenCalledWith('Unknown CLI output type:', unknownMessage);
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Unknown CLI output type:',
+        unknownMessage
+      );
       expect(results).toHaveLength(1);
       expect(results[0]?.type).toBe('user');
 

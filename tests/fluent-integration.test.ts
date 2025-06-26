@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { claude, query, ConsoleLogger, JSONLogger, LogLevel } from '../src/index.js';
+import {
+  claude,
+  query,
+  ConsoleLogger,
+  JSONLogger,
+  LogLevel
+} from '../src/index.js';
 import type { Message } from '../src/types.js';
 import * as baseModule from '../src/index.js';
 
@@ -26,12 +32,18 @@ describe('Fluent API Integration Tests', () => {
         yield {
           type: 'assistant',
           content: [
-            { type: 'text', text: 'I\'ll create the config file for you.' },
+            {
+              type: 'text',
+              text: "I'll create the config file for you."
+            },
             {
               type: 'tool_use',
               id: 'write-1',
               name: 'Write',
-              input: { path: 'config.json', content: '{"version": "1.0.0"}' }
+              input: {
+                path: 'config.json',
+                content: '{"version": "1.0.0"}'
+              }
             },
             {
               type: 'tool_result',
@@ -68,9 +80,18 @@ describe('Fluent API Integration Tests', () => {
 
     it('should handle streaming with real-time processing', async () => {
       const messages: Message[] = [
-        { type: 'assistant', content: [{ type: 'text', text: 'First...' }] },
-        { type: 'assistant', content: [{ type: 'text', text: 'Second...' }] },
-        { type: 'assistant', content: [{ type: 'text', text: 'Third!' }] },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'First...' }]
+        },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Second...' }]
+        },
+        {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Third!' }]
+        },
         { type: 'result', content: 'Streamed successfully' }
       ];
 
@@ -84,29 +105,35 @@ describe('Fluent API Integration Tests', () => {
       const messageTypes: string[] = [];
 
       await claude()
-        .onMessage(msg => messageTypes.push(msg.type))
+        .onMessage((msg) => messageTypes.push(msg.type))
         .query('Stream some text')
         .stream(async (msg) => {
           if (msg.type === 'assistant') {
             const text = msg.content
-              .filter(b => b.type === 'text')
-              .map(b => (b as any).text)
+              .filter((b) => b.type === 'text')
+              .map((b) => (b as any).text)
               .join('');
             streamedText.push(text);
           }
         });
 
       expect(streamedText).toEqual(['First...', 'Second...', 'Third!']);
-      expect(messageTypes).toEqual(['assistant', 'assistant', 'assistant', 'result']);
+      expect(messageTypes).toEqual([
+        'assistant',
+        'assistant',
+        'assistant',
+        'result'
+      ]);
     });
 
     it('should extract and transform JSON data', async () => {
       mockQuery.mockImplementation(async function* () {
         yield {
           type: 'assistant',
-          content: [{
-            type: 'text',
-            text: `Here's the user data:
+          content: [
+            {
+              type: 'text',
+              text: `Here's the user data:
 \`\`\`json
 {
   "users": [
@@ -116,14 +143,18 @@ describe('Fluent API Integration Tests', () => {
   "total": 2
 }
 \`\`\``
-          }]
+            }
+          ]
         };
       });
 
       const data = await claude()
         .skipPermissions()
         .query('Generate user data')
-        .asJSON<{ users: Array<{ id: number; name: string; role: string }>; total: number }>();
+        .asJSON<{
+          users: Array<{ id: number; name: string; role: string }>;
+          total: number;
+        }>();
 
       expect(data).toEqual({
         users: [
@@ -140,12 +171,39 @@ describe('Fluent API Integration Tests', () => {
           type: 'assistant',
           content: [
             { type: 'text', text: 'Searching for files...' },
-            { type: 'tool_use', id: '1', name: 'Glob', input: { pattern: '*.ts' } },
-            { type: 'tool_result', tool_use_id: '1', content: ['file1.ts', 'file2.ts'] },
-            { type: 'tool_use', id: '2', name: 'Read', input: { path: 'file1.ts' } },
-            { type: 'tool_result', tool_use_id: '2', content: 'const x = 1;' },
-            { type: 'tool_use', id: '3', name: 'Read', input: { path: 'file2.ts' } },
-            { type: 'tool_result', tool_use_id: '3', content: 'const y = 2;' }
+            {
+              type: 'tool_use',
+              id: '1',
+              name: 'Glob',
+              input: { pattern: '*.ts' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '1',
+              content: ['file1.ts', 'file2.ts']
+            },
+            {
+              type: 'tool_use',
+              id: '2',
+              name: 'Read',
+              input: { path: 'file1.ts' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '2',
+              content: 'const x = 1;'
+            },
+            {
+              type: 'tool_use',
+              id: '3',
+              name: 'Read',
+              input: { path: 'file2.ts' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '3',
+              content: 'const y = 2;'
+            }
           ]
         };
       });
@@ -179,7 +237,10 @@ describe('Fluent API Integration Tests', () => {
       });
 
       mockQuery.mockImplementation(async function* () {
-        yield { type: 'assistant', content: [{ type: 'text', text: 'Hello' }] };
+        yield {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Hello' }]
+        };
         yield { type: 'result', content: 'Done' };
       });
 
@@ -190,9 +251,11 @@ describe('Fluent API Integration Tests', () => {
         .asText();
 
       // Should have logged: start, messages, completion
-      expect(logs.some(log => log.message === 'Starting query')).toBe(true);
-      expect(logs.some(log => log.message === 'Consuming message generator')).toBe(true);
-      expect(logs.some(log => log.message === 'Query completed')).toBe(true);
+      expect(logs.some((log) => log.message === 'Starting query')).toBe(true);
+      expect(
+        logs.some((log) => log.message === 'Consuming message generator')
+      ).toBe(true);
+      expect(logs.some((log) => log.message === 'Query completed')).toBe(true);
     });
 
     it('should handle error scenarios gracefully', async () => {
@@ -200,11 +263,25 @@ describe('Fluent API Integration Tests', () => {
         yield {
           type: 'assistant',
           content: [
-            { type: 'tool_use', id: '1', name: 'Write', input: { path: '/root/file' } },
-            { type: 'tool_result', tool_use_id: '1', content: 'Permission denied', is_error: true }
+            {
+              type: 'tool_use',
+              id: '1',
+              name: 'Write',
+              input: { path: '/root/file' }
+            },
+            {
+              type: 'tool_result',
+              tool_use_id: '1',
+              content: 'Permission denied',
+              is_error: true
+            }
           ]
         };
-        yield { type: 'system', subtype: 'error', data: { message: 'Operation failed' } };
+        yield {
+          type: 'system',
+          subtype: 'error',
+          data: { message: 'Operation failed' }
+        };
         yield { type: 'result', content: 'Failed to complete' };
       });
 
@@ -225,9 +302,20 @@ describe('Fluent API Integration Tests', () => {
       mockQuery.mockImplementation(async function* () {
         callCount++;
         if (callCount === 1) {
-          yield { type: 'assistant', content: [{ type: 'text', text: 'Analysis: 3 files found' }] };
+          yield {
+            type: 'assistant',
+            content: [{ type: 'text', text: 'Analysis: 3 files found' }]
+          };
         } else {
-          yield { type: 'assistant', content: [{ type: 'text', text: 'Summary: All files processed' }] };
+          yield {
+            type: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text: 'Summary: All files processed'
+              }
+            ]
+          };
         }
         yield { type: 'result', content: 'Done' };
       });
@@ -254,28 +342,32 @@ describe('Fluent API Integration Tests', () => {
         yield { type: 'user', content: 'List programming languages' };
         yield {
           type: 'assistant',
-          content: [{
-            type: 'text',
-            text: '1. Python: Web development and data science\n2. JavaScript: Frontend and backend\n3. Rust: Systems programming'
-          }]
+          content: [
+            {
+              type: 'text',
+              text: '1. Python: Web development and data science\n2. JavaScript: Frontend and backend\n3. Rust: Systems programming'
+            }
+          ]
         };
         yield { type: 'result', content: 'Listed 3 languages' };
       });
 
       const summary = await claude()
         .query('List programming languages')
-        .transform(messages => {
-          const assistantMsg = messages.find(m => m.type === 'assistant');
-          if (!assistantMsg || assistantMsg.type !== 'assistant') return { languages: [] };
+        .transform((messages) => {
+          const assistantMsg = messages.find((m) => m.type === 'assistant');
+          if (!assistantMsg || assistantMsg.type !== 'assistant')
+            return { languages: [] };
 
           const text = assistantMsg.content
-            .filter(b => b.type === 'text')
-            .map(b => (b as any).text)
+            .filter((b) => b.type === 'text')
+            .map((b) => (b as any).text)
             .join('');
 
-          const languages = text.split('\n')
-            .filter(line => line.match(/^\d+\./))
-            .map(line => {
+          const languages = text
+            .split('\n')
+            .filter((line) => line.match(/^\d+\./))
+            .map((line) => {
               const match = line.match(/^\d+\.\s*(\w+):\s*(.+)$/);
               return match ? { name: match[1], use: match[2] } : null;
             })
@@ -349,7 +441,7 @@ describe('Fluent API Integration Tests', () => {
     it('should still support original query function', async () => {
       // Restore original query for this test
       // const originalQuery = (await vi.importActual('../src/index.js') as any).query;
-      
+
       // The original query function should still be exported
       expect(query).toBeDefined();
       expect(typeof query).toBe('function');
@@ -357,7 +449,10 @@ describe('Fluent API Integration Tests', () => {
 
     it('should allow mixing old and new APIs', async () => {
       mockQuery.mockImplementation(async function* () {
-        yield { type: 'assistant', content: [{ type: 'text', text: 'Response' }] };
+        yield {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Response' }]
+        };
       });
 
       // Use old API to get generator
@@ -370,7 +465,9 @@ describe('Fluent API Integration Tests', () => {
       }
 
       expect(messages).toHaveLength(1);
-      expect(mockQuery).toHaveBeenCalledWith('Test prompt', { model: 'sonnet' });
+      expect(mockQuery).toHaveBeenCalledWith('Test prompt', {
+        model: 'sonnet'
+      });
     });
 
     it('should maintain type compatibility', () => {
@@ -378,11 +475,11 @@ describe('Fluent API Integration Tests', () => {
       const testTypeCompat = async () => {
         // Old style
         const gen1: AsyncGenerator<Message> = query('test');
-        
+
         // New style returning generator
         const builder = claude();
         const gen2: AsyncGenerator<Message> = builder.queryRaw('test');
-        
+
         // Both should be assignable to same type
         void [gen1, gen2]; // Both assignable to same type
       };
@@ -394,7 +491,7 @@ describe('Fluent API Integration Tests', () => {
   describe('Performance Considerations', () => {
     it('should not consume generator until needed', async () => {
       let generatorCalled = false;
-      
+
       mockQuery.mockImplementation(async function* () {
         generatorCalled = true;
         yield { type: 'result', content: 'Done' };
@@ -402,12 +499,12 @@ describe('Fluent API Integration Tests', () => {
 
       // Create parser but don't consume
       const parser = claude().query('Test');
-      
+
       expect(generatorCalled).toBe(false);
-      
+
       // Now consume
       await parser.asText();
-      
+
       expect(generatorCalled).toBe(true);
     });
 

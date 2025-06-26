@@ -6,32 +6,34 @@ import type { Message } from '../src/types.js';
 // Mock the InternalClient to avoid needing actual Claude CLI
 vi.mock('../src/_internal/client.js', () => {
   return {
-    InternalClient: vi.fn().mockImplementation((prompt: string, options: any) => {
-      const mockMessages: Message[] = [
-        {
-          type: 'assistant',
-          content: [{ type: 'text', text: `Response to: ${prompt}` }],
-          session_id: 'mock-session-123'
-        },
-        {
-          type: 'result',
-          content: 'Query completed',
-          session_id: 'mock-session-123'
-        }
-      ];
-
-      return {
-        async *processQuery() {
-          for (const message of mockMessages) {
-            yield message;
+    InternalClient: vi
+      .fn()
+      .mockImplementation((prompt: string, options: any) => {
+        const mockMessages: Message[] = [
+          {
+            type: 'assistant',
+            content: [{ type: 'text', text: `Response to: ${prompt}` }],
+            session_id: 'mock-session-123'
+          },
+          {
+            type: 'result',
+            content: 'Query completed',
+            session_id: 'mock-session-123'
           }
-        },
-        getTransport: () => undefined,
-        hasActiveTransport: () => false,
-        sendStreamingInput: vi.fn(),
-        dispose: vi.fn()
-      };
-    })
+        ];
+
+        return {
+          async *processQuery() {
+            for (const message of mockMessages) {
+              yield message;
+            }
+          },
+          getTransport: () => undefined,
+          hasActiveTransport: () => false,
+          sendStreamingInput: vi.fn(),
+          dispose: vi.fn()
+        };
+      })
   };
 });
 
@@ -75,7 +77,7 @@ describe('Conversation Integration', () => {
       conversation = claude().asConversation();
 
       const sessionIds: (string | null)[] = [];
-      conversation.onSessionId(sessionId => {
+      conversation.onSessionId((sessionId) => {
         sessionIds.push(sessionId);
       });
 
@@ -159,8 +161,14 @@ describe('Conversation Integration', () => {
 
       if (sessionId) {
         // Simple branching
-        const branch1 = await builder.withSessionId(sessionId).query('Branch 1').asText();
-        const branch2 = await builder.withSessionId(sessionId).query('Branch 2').asText();
+        const branch1 = await builder
+          .withSessionId(sessionId)
+          .query('Branch 1')
+          .asText();
+        const branch2 = await builder
+          .withSessionId(sessionId)
+          .query('Branch 2')
+          .asText();
 
         expect(branch1).toContain('Branch 1');
         expect(branch2).toContain('Branch 2');
@@ -176,7 +184,9 @@ describe('Conversation Integration', () => {
 
       if (sessionId) {
         // Advanced branching
-        const branchConversation = builder.withSessionId(sessionId).asConversation();
+        const branchConversation = builder
+          .withSessionId(sessionId)
+          .asConversation();
         expect(branchConversation.getSessionId()).toBe(sessionId);
 
         const branchParser = branchConversation.query('Branch query');
@@ -204,10 +214,18 @@ describe('Conversation Integration', () => {
       conversation = claude().asConversation();
       await conversation.dispose();
 
-      expect(() => conversation.query('test')).toThrow('Conversation has been disposed');
-      expect(() => conversation.stream(() => {})).toThrow('Conversation has been disposed');
-      expect(() => conversation.onSessionId(() => {})).toThrow('Conversation has been disposed');
-      await expect(conversation.send('test')).rejects.toThrow('Conversation has been disposed');
+      expect(() => conversation.query('test')).toThrow(
+        'Conversation has been disposed'
+      );
+      expect(() => conversation.stream(() => {})).toThrow(
+        'Conversation has been disposed'
+      );
+      expect(() => conversation.onSessionId(() => {})).toThrow(
+        'Conversation has been disposed'
+      );
+      await expect(conversation.send('test')).rejects.toThrow(
+        'Conversation has been disposed'
+      );
     });
 
     it('should handle stream handler errors gracefully', async () => {

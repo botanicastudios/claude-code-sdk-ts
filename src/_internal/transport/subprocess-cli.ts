@@ -5,7 +5,12 @@ import { platform } from 'node:os';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { access, constants } from 'node:fs/promises';
-import { CLIConnectionError, CLINotFoundError, ProcessError, CLIJSONDecodeError } from '../../errors.js';
+import {
+  CLIConnectionError,
+  CLINotFoundError,
+  ProcessError,
+  CLIJSONDecodeError
+} from '../../errors.js';
 import type { ClaudeCodeOptions, CLIOutput } from '../../types.js';
 
 export class SubprocessCLITransport {
@@ -92,12 +97,17 @@ export class SubprocessCLITransport {
           this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
 
           if (this.options.debug) {
-            console.error('DEBUG: [Transport] Successfully wrote JSONL to stdin');
+            console.error(
+              'DEBUG: [Transport] Successfully wrote JSONL to stdin'
+            );
           }
         } else {
           // For non-streaming mode, write as-is (though this shouldn't happen)
           if (this.options.debug) {
-            console.error('DEBUG: [Transport] Writing raw data to stdin:', data.substring(0, 100) + '...');
+            console.error(
+              'DEBUG: [Transport] Writing raw data to stdin:',
+              data.substring(0, 100) + '...'
+            );
           }
           this.process.stdin.write(data);
         }
@@ -109,7 +119,10 @@ export class SubprocessCLITransport {
 
   private async findCLI(): Promise<string> {
     // First check for local Claude installation (newer version with --output-format support)
-    const localPaths = [join(homedir(), '.claude', 'local', 'claude'), join(homedir(), '.claude', 'bin', 'claude')];
+    const localPaths = [
+      join(homedir(), '.claude', 'local', 'claude'),
+      join(homedir(), '.claude', 'bin', 'claude')
+    ];
 
     for (const path of localPaths) {
       try {
@@ -140,7 +153,14 @@ export class SubprocessCLITransport {
     if (isWindows) {
       paths.push(
         join(home, 'AppData', 'Local', 'Programs', 'claude', 'claude.exe'),
-        join(home, 'AppData', 'Local', 'Programs', 'claude-code', 'claude-code.exe'),
+        join(
+          home,
+          'AppData',
+          'Local',
+          'Programs',
+          'claude-code',
+          'claude-code.exe'
+        ),
         'C:\\Program Files\\claude\\claude.exe',
         'C:\\Program Files\\claude-code\\claude-code.exe'
       );
@@ -162,9 +182,16 @@ export class SubprocessCLITransport {
 
     // Try global npm/yarn paths
     try {
-      const { stdout: npmPrefix } = await execa('npm', ['config', 'get', 'prefix']);
+      const { stdout: npmPrefix } = await execa('npm', [
+        'config',
+        'get',
+        'prefix'
+      ]);
       if (npmPrefix) {
-        paths.push(join(npmPrefix.trim(), 'bin', 'claude'), join(npmPrefix.trim(), 'bin', 'claude-code'));
+        paths.push(
+          join(npmPrefix.trim(), 'bin', 'claude'),
+          join(npmPrefix.trim(), 'bin', 'claude-code')
+        );
       }
     } catch {
       // Ignore error and continue
@@ -190,6 +217,21 @@ export class SubprocessCLITransport {
     // Claude CLI supported flags (from --help)
     if (this.options.model) args.push('--model', this.options.model);
     // Don't pass --debug flag as it produces non-JSON output
+
+    // Handle max turns
+    if (this.options.maxTurns !== undefined) {
+      args.push('--max-turns', this.options.maxTurns.toString());
+    }
+
+    // Handle system prompt
+    if (this.options.systemPrompt) {
+      args.push('--system-prompt', this.options.systemPrompt);
+    }
+
+    // Handle append system prompt
+    if (this.options.appendSystemPrompt) {
+      args.push('--append-system-prompt', this.options.appendSystemPrompt);
+    }
 
     // Note: Claude CLI handles authentication internally
     // It will use either session auth or API key based on user's setup
@@ -263,7 +305,7 @@ export class SubprocessCLITransport {
       });
 
       // Set up process error handling
-      this.process.on('error', error => {
+      this.process.on('error', (error) => {
         if (this.options.debug) {
           console.error('DEBUG: Process error:', error);
         }
@@ -288,11 +330,16 @@ export class SubprocessCLITransport {
           };
 
           if (this.options.debug) {
-            console.error('DEBUG: [Transport] Sending initial JSONL message in streaming mode', {
-              streamingMode: this.streamingMode,
-              keepAlive: this.keepAlive,
-              willKeepStdinOpen: this.keepAlive ? 'indefinitely until end()' : 'until result message received'
-            });
+            console.error(
+              'DEBUG: [Transport] Sending initial JSONL message in streaming mode',
+              {
+                streamingMode: this.streamingMode,
+                keepAlive: this.keepAlive,
+                willKeepStdinOpen: this.keepAlive
+                  ? 'indefinitely until end()'
+                  : 'until result message received'
+              }
+            );
           }
 
           this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
@@ -310,7 +357,9 @@ export class SubprocessCLITransport {
         this.connectTimeout = setTimeout(() => {
           if (this.process && !this.process.killed) {
             this.process.cancel();
-            throw new CLIConnectionError(`Connection timeout after ${this.options.timeout}ms`);
+            throw new CLIConnectionError(
+              `Connection timeout after ${this.options.timeout}ms`
+            );
           }
         }, this.options.timeout);
       }
@@ -338,13 +387,13 @@ export class SubprocessCLITransport {
         crlfDelay: Infinity
       });
 
-      stderrRl.on('line', line => {
+      stderrRl.on('line', (line) => {
         if (this.options.debug) {
           console.error('DEBUG stderr:', line);
         }
       });
 
-      stderrRl.on('error', error => {
+      stderrRl.on('error', (error) => {
         if (this.options.debug) {
           console.error('DEBUG stderr error:', error);
         }
@@ -378,7 +427,9 @@ export class SubprocessCLITransport {
             !this.process.stdin.destroyed
           ) {
             if (this.options.debug) {
-              console.error('DEBUG: [Transport] Received result message, closing stdin for non-keepAlive mode');
+              console.error(
+                'DEBUG: [Transport] Received result message, closing stdin for non-keepAlive mode'
+              );
             }
             this.process.stdin.end();
           }
@@ -387,7 +438,10 @@ export class SubprocessCLITransport {
         } catch (error) {
           // Skip non-JSON lines (like Python SDK does)
           if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
-            throw new CLIJSONDecodeError(`Failed to parse CLI output: ${error}`, trimmedLine);
+            throw new CLIJSONDecodeError(
+              `Failed to parse CLI output: ${error}`,
+              trimmedLine
+            );
           }
           continue;
         }
@@ -398,7 +452,11 @@ export class SubprocessCLITransport {
         await this.process;
       } catch (error: any) {
         if (error.exitCode !== 0) {
-          throw new ProcessError(`Claude Code CLI exited with code ${error.exitCode}`, error.exitCode, error.signal);
+          throw new ProcessError(
+            `Claude Code CLI exited with code ${error.exitCode}`,
+            error.exitCode,
+            error.signal
+          );
         }
       }
     } catch (error) {
@@ -431,7 +489,7 @@ export class SubprocessCLITransport {
         // Wait a bit for graceful shutdown
         await Promise.race([
           this.process.catch(() => {}), // Ignore exit errors
-          new Promise(resolve => setTimeout(resolve, 1000)) // 1 second timeout
+          new Promise((resolve) => setTimeout(resolve, 1000)) // 1 second timeout
         ]);
       } catch (error) {
         // Ignore cleanup errors
