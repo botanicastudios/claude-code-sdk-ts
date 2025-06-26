@@ -4,13 +4,13 @@ import type { Logger } from './logger.js';
 /**
  * Response parser for extracting and transforming Claude messages
  * Provides convenient methods for common parsing patterns
- * 
+ *
  * @example
  * ```typescript
  * const result = await claude()
  *   .query('Create a hello.txt file')
  *   .asText(); // Returns just the text content
- * 
+ *
  * const files = await claude()
  *   .query('Read all config files')
  *   .findToolResults('Read'); // Returns all Read tool results
@@ -39,7 +39,7 @@ export class ResponseParser {
    */
   async asText(): Promise<string> {
     await this.consume();
-    
+
     const texts: string[] = [];
     for (const msg of this.messages) {
       if (msg.type === 'assistant') {
@@ -50,7 +50,7 @@ export class ResponseParser {
         }
       }
     }
-    
+
     return texts.join('\n');
   }
 
@@ -59,8 +59,10 @@ export class ResponseParser {
    */
   async asResult(): Promise<string | null> {
     await this.consume();
-    
-    const resultMsg = this.messages.findLast((msg): msg is ResultMessage => msg.type === 'result');
+
+    const resultMsg = this.messages.findLast(
+      (msg): msg is ResultMessage => msg.type === 'result'
+    );
     return resultMsg?.content ?? null;
   }
 
@@ -69,10 +71,10 @@ export class ResponseParser {
    */
   async asToolExecutions(): Promise<ToolExecution[]> {
     await this.consume();
-    
+
     const executions: ToolExecution[] = [];
     const toolUses = new Map<string, ToolUseBlock>();
-    
+
     for (const msg of this.messages) {
       if (msg.type === 'assistant') {
         for (const block of msg.content) {
@@ -92,7 +94,7 @@ export class ResponseParser {
         }
       }
     }
-    
+
     return executions;
   }
 
@@ -102,8 +104,8 @@ export class ResponseParser {
   async findToolResults(toolName: string): Promise<any[]> {
     const executions = await this.asToolExecutions();
     return executions
-      .filter(exec => exec.tool === toolName && !exec.isError)
-      .map(exec => exec.result);
+      .filter((exec) => exec.tool === toolName && !exec.isError)
+      .map((exec) => exec.result);
   }
 
   /**
@@ -119,17 +121,19 @@ export class ResponseParser {
    */
   async asJSON<T = any>(): Promise<T | null> {
     const text = await this.asText();
-    
+
     // Try to find JSON in code blocks first
     const codeBlockMatch = text.match(/```(?:json)?\n([\s\S]*?)\n```/);
     if (codeBlockMatch) {
       try {
         return JSON.parse(codeBlockMatch[1] ?? '');
       } catch (e) {
-        this.logger?.warn('Failed to parse JSON from code block', { error: e });
+        this.logger?.warn('Failed to parse JSON from code block', {
+          error: e
+        });
       }
     }
-    
+
     // Try to parse the entire text as JSON
     try {
       return JSON.parse(text);
@@ -140,11 +144,13 @@ export class ResponseParser {
         try {
           return JSON.parse(jsonMatch[0]);
         } catch (e) {
-          this.logger?.warn('Failed to parse JSON from text', { error: e });
+          this.logger?.warn('Failed to parse JSON from text', {
+            error: e
+          });
         }
       }
     }
-    
+
     return null;
   }
 
@@ -153,16 +159,20 @@ export class ResponseParser {
    */
   async getUsage(): Promise<UsageStats | null> {
     await this.consume();
-    
-    const resultMsg = this.messages.findLast((msg): msg is ResultMessage => msg.type === 'result');
+
+    const resultMsg = this.messages.findLast(
+      (msg): msg is ResultMessage => msg.type === 'result'
+    );
     if (!resultMsg?.usage) return null;
-    
+
     return {
       inputTokens: resultMsg.usage.input_tokens ?? 0,
       outputTokens: resultMsg.usage.output_tokens ?? 0,
       cacheCreationTokens: resultMsg.usage.cache_creation_input_tokens ?? 0,
       cacheReadTokens: resultMsg.usage.cache_read_input_tokens ?? 0,
-      totalTokens: (resultMsg.usage.input_tokens ?? 0) + (resultMsg.usage.output_tokens ?? 0),
+      totalTokens:
+        (resultMsg.usage.input_tokens ?? 0) +
+        (resultMsg.usage.output_tokens ?? 0),
       totalCost: resultMsg.cost?.total_cost ?? 0
     };
   }
@@ -170,7 +180,9 @@ export class ResponseParser {
   /**
    * Stream messages with a callback (doesn't consume for other methods)
    */
-  async stream(callback: (message: Message) => void | Promise<void>): Promise<void> {
+  async stream(
+    callback: (message: Message) => void | Promise<void>
+  ): Promise<void> {
     for await (const message of this.generator) {
       // Run handlers
       for (const handler of this.handlers) {
@@ -180,14 +192,14 @@ export class ResponseParser {
           this.logger?.error('Message handler error', { error });
         }
       }
-      
+
       // Store message
       this.messages.push(message);
-      
+
       // Run callback
       await callback(message);
     }
-    
+
     this.consumed = true;
   }
 
@@ -196,14 +208,16 @@ export class ResponseParser {
    */
   async succeeded(): Promise<boolean> {
     await this.consume();
-    
-    const resultMsg = this.messages.findLast((msg): msg is ResultMessage => msg.type === 'result');
+
+    const resultMsg = this.messages.findLast(
+      (msg): msg is ResultMessage => msg.type === 'result'
+    );
     if (!resultMsg) return false;
-    
+
     // Check if any tool execution failed
     const executions = await this.asToolExecutions();
-    const hasErrors = executions.some(exec => exec.isError);
-    
+    const hasErrors = executions.some((exec) => exec.isError);
+
     return !hasErrors;
   }
 
@@ -212,16 +226,16 @@ export class ResponseParser {
    */
   async getErrors(): Promise<string[]> {
     await this.consume();
-    
+
     const errors: string[] = [];
-    
+
     // Check system messages for errors
     for (const msg of this.messages) {
       if (msg.type === 'system' && msg.subtype === 'error') {
         errors.push(msg.data?.message || 'Unknown error');
       }
     }
-    
+
     // Check tool results for errors
     const executions = await this.asToolExecutions();
     for (const exec of executions) {
@@ -229,7 +243,7 @@ export class ResponseParser {
         errors.push(`Tool ${exec.tool} failed: ${exec.result}`);
       }
     }
-    
+
     return errors;
   }
 
@@ -246,12 +260,12 @@ export class ResponseParser {
    */
   private async consume(): Promise<void> {
     if (this.consumed) return;
-    
+
     this.logger?.debug('Consuming message generator');
-    
+
     for await (const message of this.generator) {
       this.logger?.debug('Received message', { type: message.type });
-      
+
       // Run handlers
       for (const handler of this.handlers) {
         try {
@@ -260,12 +274,14 @@ export class ResponseParser {
           this.logger?.error('Message handler error', { error });
         }
       }
-      
+
       this.messages.push(message);
     }
-    
+
     this.consumed = true;
-    this.logger?.debug('Message generator consumed', { messageCount: this.messages.length });
+    this.logger?.debug('Message generator consumed', {
+      messageCount: this.messages.length
+    });
   }
 }
 

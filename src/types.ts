@@ -78,7 +78,11 @@ export interface ResultMessage {
   };
 }
 
-export type Message = UserMessage | AssistantMessage | SystemMessage | ResultMessage;
+export type Message =
+  | UserMessage
+  | AssistantMessage
+  | SystemMessage
+  | ResultMessage;
 
 // MCP server configuration
 export interface MCPServer {
@@ -100,6 +104,9 @@ export interface ClaudeCodeOptions {
   context?: string[];
   maxTokens?: number;
   temperature?: number;
+  maxTurns?: number;
+  systemPrompt?: string;
+  appendSystemPrompt?: string;
   cwd?: string;
   env?: Record<string, string>;
   timeout?: number;

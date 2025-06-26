@@ -53,7 +53,12 @@ describe('QueryBuilder', () => {
         yield { type: 'result', content: 'done' };
       });
 
-      claude().withModel('sonnet').withTimeout(5000).debug(true).inDirectory('/test/dir').query('test');
+      claude()
+        .withModel('sonnet')
+        .withTimeout(5000)
+        .debug(true)
+        .inDirectory('/test/dir')
+        .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith(
         'test',
@@ -62,6 +67,72 @@ describe('QueryBuilder', () => {
           timeout: 5000,
           debug: true,
           cwd: '/test/dir'
+        })
+      );
+    });
+
+    it('should set max turns', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().withMaxTurns(5).query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          maxTurns: 5
+        })
+      );
+    });
+
+    it('should set system prompt', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().withSystemPrompt('You are a helpful assistant.').query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          systemPrompt: 'You are a helpful assistant.'
+        })
+      );
+    });
+
+    it('should set append system prompt', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().appendSystemPrompt('Always be concise.').query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          appendSystemPrompt: 'Always be concise.'
+        })
+      );
+    });
+
+    it('should chain system prompt configurations', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude()
+        .withSystemPrompt('You are a helpful assistant.')
+        .appendSystemPrompt('Always be concise.')
+        .withMaxTurns(3)
+        .query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          systemPrompt: 'You are a helpful assistant.',
+          appendSystemPrompt: 'Always be concise.',
+          maxTurns: 3
         })
       );
     });
@@ -183,7 +254,10 @@ describe('QueryBuilder', () => {
         yield { type: 'result', content: 'done' };
       });
 
-      claude().withEnv({ NODE_ENV: 'test' }).withEnv({ API_KEY: 'secret' }).query('test');
+      claude()
+        .withEnv({ NODE_ENV: 'test' })
+        .withEnv({ API_KEY: 'secret' })
+        .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith(
         'test',
@@ -201,13 +275,19 @@ describe('QueryBuilder', () => {
       });
 
       claude()
-        .withMCP({ command: 'mcp-server-1' }, { command: 'mcp-server-2', args: ['--flag'] })
+        .withMCP(
+          { command: 'mcp-server-1' },
+          { command: 'mcp-server-2', args: ['--flag'] }
+        )
         .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith(
         'test',
         expect.objectContaining({
-          mcpServers: [{ command: 'mcp-server-1' }, { command: 'mcp-server-2', args: ['--flag'] }]
+          mcpServers: [
+            { command: 'mcp-server-1' },
+            { command: 'mcp-server-2', args: ['--flag'] }
+          ]
         })
       );
     });
@@ -217,7 +297,10 @@ describe('QueryBuilder', () => {
         yield { type: 'result', content: 'done' };
       });
 
-      claude().withMCP({ command: 'server1' }).withMCP({ command: 'server2' }).query('test');
+      claude()
+        .withMCP({ command: 'server1' })
+        .withMCP({ command: 'server2' })
+        .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith(
         'test',
@@ -273,7 +356,12 @@ describe('QueryBuilder', () => {
       expect(mockQuery).toHaveBeenCalledWith(
         'test',
         expect.objectContaining({
-          addDirectories: ['/first/dir', '/second/dir', '/third/dir', '/fourth/dir']
+          addDirectories: [
+            '/first/dir',
+            '/second/dir',
+            '/third/dir',
+            '/fourth/dir'
+          ]
         })
       );
     });
@@ -285,7 +373,10 @@ describe('QueryBuilder', () => {
 
       mockQuery.mockImplementation(async function* () {
         yield { type: 'user', content: 'Hello' };
-        yield { type: 'assistant', content: [{ type: 'text', text: 'Hi!' }] };
+        yield {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Hi!' }]
+        };
         yield { type: 'result', content: 'done' };
       });
 
@@ -295,9 +386,15 @@ describe('QueryBuilder', () => {
       }
 
       expect(handler).toHaveBeenCalledTimes(3);
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ type: 'user' }));
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ type: 'assistant' }));
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ type: 'result' }));
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'user' })
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'assistant' })
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'result' })
+      );
     });
 
     it('should call assistant handlers', async () => {
@@ -305,7 +402,10 @@ describe('QueryBuilder', () => {
 
       mockQuery.mockImplementation(async function* () {
         yield { type: 'user', content: 'Hello' };
-        yield { type: 'assistant', content: [{ type: 'text', text: 'Hi!' }] };
+        yield {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Hi!' }]
+        };
         yield { type: 'result', content: 'done' };
       });
 
@@ -357,11 +457,17 @@ describe('QueryBuilder', () => {
         yield { type: 'result', content: 'done' };
       });
 
-      for await (const _ of claude().withLogger(logger).onMessage(errorHandler).queryRaw('test')) {
+      for await (const _ of claude()
+        .withLogger(logger)
+        .onMessage(errorHandler)
+        .queryRaw('test')) {
         // Process
       }
 
-      expect(logSpy).toHaveBeenCalledWith('Message handler error', expect.any(Object));
+      expect(logSpy).toHaveBeenCalledWith(
+        'Message handler error',
+        expect.any(Object)
+      );
     });
   });
 
@@ -376,7 +482,9 @@ describe('QueryBuilder', () => {
         yield { type: 'result', content: 'done' };
       });
 
-      for await (const _ of claude().withLogger(logger).queryRaw('test prompt')) {
+      for await (const _ of claude()
+        .withLogger(logger)
+        .queryRaw('test prompt')) {
         // Process
       }
 
@@ -410,7 +518,10 @@ describe('QueryBuilder', () => {
       const handler = vi.fn();
 
       mockQuery.mockImplementation(async function* () {
-        yield { type: 'assistant', content: [{ type: 'text', text: 'Hello' }] };
+        yield {
+          type: 'assistant',
+          content: [{ type: 'text', text: 'Hello' }]
+        };
       });
 
       await claude().onMessage(handler).query('test').asText();

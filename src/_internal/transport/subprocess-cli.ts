@@ -5,7 +5,12 @@ import { platform } from 'node:os';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { access, constants } from 'node:fs/promises';
-import { CLIConnectionError, CLINotFoundError, ProcessError, CLIJSONDecodeError } from '../../errors.js';
+import {
+  CLIConnectionError,
+  CLINotFoundError,
+  ProcessError,
+  CLIJSONDecodeError
+} from '../../errors.js';
 import type { ClaudeCodeOptions, CLIOutput } from '../../types.js';
 
 export class SubprocessCLITransport {
@@ -20,7 +25,10 @@ export class SubprocessCLITransport {
 
   private async findCLI(): Promise<string> {
     // First check for local Claude installation (newer version with --output-format support)
-    const localPaths = [join(homedir(), '.claude', 'local', 'claude'), join(homedir(), '.claude', 'bin', 'claude')];
+    const localPaths = [
+      join(homedir(), '.claude', 'local', 'claude'),
+      join(homedir(), '.claude', 'bin', 'claude')
+    ];
 
     for (const path of localPaths) {
       try {
@@ -51,7 +59,14 @@ export class SubprocessCLITransport {
     if (isWindows) {
       paths.push(
         join(home, 'AppData', 'Local', 'Programs', 'claude', 'claude.exe'),
-        join(home, 'AppData', 'Local', 'Programs', 'claude-code', 'claude-code.exe'),
+        join(
+          home,
+          'AppData',
+          'Local',
+          'Programs',
+          'claude-code',
+          'claude-code.exe'
+        ),
         'C:\\Program Files\\claude\\claude.exe',
         'C:\\Program Files\\claude-code\\claude-code.exe'
       );
@@ -73,9 +88,16 @@ export class SubprocessCLITransport {
 
     // Try global npm/yarn paths
     try {
-      const { stdout: npmPrefix } = await execa('npm', ['config', 'get', 'prefix']);
+      const { stdout: npmPrefix } = await execa('npm', [
+        'config',
+        'get',
+        'prefix'
+      ]);
       if (npmPrefix) {
-        paths.push(join(npmPrefix.trim(), 'bin', 'claude'), join(npmPrefix.trim(), 'bin', 'claude-code'));
+        paths.push(
+          join(npmPrefix.trim(), 'bin', 'claude'),
+          join(npmPrefix.trim(), 'bin', 'claude-code')
+        );
       }
     } catch {
       // Ignore error and continue
@@ -101,6 +123,21 @@ export class SubprocessCLITransport {
     // Claude CLI supported flags (from --help)
     if (this.options.model) args.push('--model', this.options.model);
     // Don't pass --debug flag as it produces non-JSON output
+
+    // Handle max turns
+    if (this.options.maxTurns !== undefined) {
+      args.push('--max-turns', this.options.maxTurns.toString());
+    }
+
+    // Handle system prompt
+    if (this.options.systemPrompt) {
+      args.push('--system', this.options.systemPrompt);
+    }
+
+    // Handle append system prompt
+    if (this.options.appendSystemPrompt) {
+      args.push('--append-system-prompt', this.options.appendSystemPrompt);
+    }
 
     // Note: Claude CLI handles authentication internally
     // It will use either session auth or API key based on user's setup
@@ -185,7 +222,7 @@ export class SubprocessCLITransport {
         crlfDelay: Infinity
       });
 
-      stderrRl.on('line', line => {
+      stderrRl.on('line', (line) => {
         if (this.options.debug) {
           console.error('DEBUG stderr:', line);
         }
@@ -212,7 +249,10 @@ export class SubprocessCLITransport {
       } catch (error) {
         // Skip non-JSON lines (like Python SDK does)
         if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
-          throw new CLIJSONDecodeError(`Failed to parse CLI output: ${error}`, trimmedLine);
+          throw new CLIJSONDecodeError(
+            `Failed to parse CLI output: ${error}`,
+            trimmedLine
+          );
         }
         continue;
       }
@@ -223,7 +263,11 @@ export class SubprocessCLITransport {
       await this.process;
     } catch (error: any) {
       if (error.exitCode !== 0) {
-        throw new ProcessError(`Claude Code CLI exited with code ${error.exitCode}`, error.exitCode, error.signal);
+        throw new ProcessError(
+          `Claude Code CLI exited with code ${error.exitCode}`,
+          error.exitCode,
+          error.signal
+        );
       }
     }
   }

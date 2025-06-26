@@ -1,5 +1,10 @@
 import { query as baseQuery } from './index.js';
-import type { ClaudeCodeOptions, Message, ToolName, PermissionMode } from './types.js';
+import type {
+  ClaudeCodeOptions,
+  Message,
+  ToolName,
+  PermissionMode
+} from './types.js';
 import { ResponseParser } from './parser.js';
 import { Logger } from './logger.js';
 
@@ -96,6 +101,30 @@ export class QueryBuilder {
   }
 
   /**
+   * Set maximum number of turns/iterations
+   */
+  withMaxTurns(turns: number): this {
+    this.options.maxTurns = turns;
+    return this;
+  }
+
+  /**
+   * Set system prompt
+   */
+  withSystemPrompt(prompt: string): this {
+    this.options.systemPrompt = prompt;
+    return this;
+  }
+
+  /**
+   * Append to system prompt
+   */
+  appendSystemPrompt(prompt: string): this {
+    this.options.appendSystemPrompt = prompt;
+    return this;
+  }
+
+  /**
    * Enable debug mode
    */
   debug(enabled = true): this {
@@ -143,7 +172,7 @@ export class QueryBuilder {
    * Add handler for specific message type
    */
   onAssistant(handler: (content: any) => void): this {
-    this.messageHandlers.push(msg => {
+    this.messageHandlers.push((msg) => {
       if (msg.type === 'assistant') {
         handler((msg as any).content);
       }
@@ -155,7 +184,7 @@ export class QueryBuilder {
    * Add handler for tool usage
    */
   onToolUse(handler: (tool: { name: string; input: any }) => void): this {
-    this.messageHandlers.push(msg => {
+    this.messageHandlers.push((msg) => {
       if (msg.type === 'assistant') {
         for (const block of msg.content) {
           if (block.type === 'tool_use') {
@@ -171,7 +200,11 @@ export class QueryBuilder {
    * Execute query and return response parser
    */
   query(prompt: string): ResponseParser {
-    const parser = new ResponseParser(baseQuery(prompt, this.options), this.messageHandlers, this.logger);
+    const parser = new ResponseParser(
+      baseQuery(prompt, this.options),
+      this.messageHandlers,
+      this.logger
+    );
     return parser;
   }
 

@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { query, claude, QueryBuilder, ResponseParser, Logger, ConsoleLogger } from '../src/index.js';
+import {
+  query,
+  claude,
+  QueryBuilder,
+  ResponseParser,
+  Logger,
+  ConsoleLogger
+} from '../src/index.js';
 import type { Message, ClaudeCodeOptions } from '../src/types.js';
 
 describe('Backward Compatibility', () => {
@@ -14,7 +21,7 @@ describe('Backward Compatibility', () => {
     expect(QueryBuilder).toBeDefined();
     expect(ResponseParser).toBeDefined();
     expect(ConsoleLogger).toBeDefined();
-    
+
     // Ensure they are the correct types
     expect(typeof claude).toBe('function');
     expect(typeof QueryBuilder).toBe('function');
@@ -27,7 +34,7 @@ describe('Backward Compatibility', () => {
     const generator = query('test prompt');
     expect(generator).toBeDefined();
     expect(generator[Symbol.asyncIterator]).toBeDefined();
-    
+
     const generatorWithOptions = query('test', { model: 'sonnet' });
     expect(generatorWithOptions).toBeDefined();
     expect(generatorWithOptions[Symbol.asyncIterator]).toBeDefined();
@@ -38,7 +45,7 @@ describe('Backward Compatibility', () => {
     const oldStyleGen = query('test');
     const newStyleBuilder = claude();
     const newStyleGen = newStyleBuilder.queryRaw('test');
-    
+
     // Both should be async generators
     expect(oldStyleGen[Symbol.asyncIterator]).toBeDefined();
     expect(newStyleGen[Symbol.asyncIterator]).toBeDefined();
@@ -50,13 +57,13 @@ describe('Backward Compatibility', () => {
       // Original types should still work
       const msg: Message = { type: 'user', content: 'test' };
       const opts: ClaudeCodeOptions = { model: 'sonnet' };
-      
+
       // New types should also be available
       const logger: Logger | null = null;
-      
+
       return { msg, opts, logger };
     };
-    
+
     expect(testTypes).toBeDefined();
   });
 });

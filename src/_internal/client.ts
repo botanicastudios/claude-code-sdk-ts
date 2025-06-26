@@ -36,20 +36,20 @@ export class InternalClient {
           type: 'user',
           content: output.message?.content || ''
         };
-      
+
       case 'assistant':
         return {
           type: 'assistant',
           content: output.message?.content || []
         };
-        
+
       case 'system':
         return {
           type: 'system',
           subtype: output.subtype,
           data: output
         };
-        
+
       case 'result':
         return {
           type: 'result',
@@ -60,10 +60,12 @@ export class InternalClient {
             total_cost: output.total_cost_usd
           }
         };
-      
+
       case 'error':
-        throw new ClaudeSDKError(`CLI error: ${output.error?.message || 'Unknown error'}`);
-      
+        throw new ClaudeSDKError(
+          `CLI error: ${output.error?.message || 'Unknown error'}`
+        );
+
       default:
         // Skip unknown message types
         return null;
