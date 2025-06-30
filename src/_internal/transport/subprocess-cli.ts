@@ -118,7 +118,17 @@ export class SubprocessCLITransport {
   }
 
   private async findCLI(): Promise<string> {
-    // First check for local Claude installation (newer version with --output-format support)
+    // First check if a custom executable path is provided
+    if (this.options.executablePath) {
+      try {
+        await access(this.options.executablePath, constants.X_OK);
+        return this.options.executablePath;
+      } catch {
+        throw new CLINotFoundError();
+      }
+    }
+
+    // Then check for local Claude installation (newer version with --output-format support)
     const localPaths = [
       join(homedir(), '.claude', 'local', 'claude'),
       join(homedir(), '.claude', 'bin', 'claude')

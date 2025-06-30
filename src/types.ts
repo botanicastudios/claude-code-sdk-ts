@@ -119,6 +119,7 @@ export interface ClaudeCodeOptions {
   addDirectories?: string[];
   sessionId?: string;
   keepAlive?: boolean;
+  executablePath?: string;
 }
 
 // Additional types for internal use

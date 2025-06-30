@@ -102,6 +102,14 @@ export class QueryBuilder {
   }
 
   /**
+   * Set custom path to Claude Code executable
+   */
+  withExecutable(path: string): this {
+    this.options.executablePath = path;
+    return this;
+  }
+
+  /**
    * Set session ID for continuing an existing conversation
    */
   withSessionId(sessionId: string): this {
