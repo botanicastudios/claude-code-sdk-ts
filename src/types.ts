@@ -67,6 +67,7 @@ export interface ResultMessage {
   subtype?: string;
   content: string;
   result?: string;
+  is_error?: boolean;
   session_id?: string;
   usage?: {
     input_tokens?: number;
