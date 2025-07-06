@@ -150,6 +150,7 @@ export class InternalClient {
         return {
           type: 'result',
           subtype: output.subtype,
+          is_error: output.is_error,
           content: output.result || '',
           result: output.result || '',
           usage: output.usage,
