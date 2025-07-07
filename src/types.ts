@@ -121,6 +121,7 @@ export interface ClaudeCodeOptions {
   sessionId?: string;
   keepAlive?: boolean;
   executablePath?: string;
+  wrapperCommand?: string[];
 }
 
 // Additional types for internal use

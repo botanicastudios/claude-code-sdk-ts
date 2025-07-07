@@ -110,6 +110,14 @@ export class QueryBuilder {
   }
 
   /**
+   * Set wrapper command to run the CLI through (e.g., 'wsl.exe', 'node')
+   */
+  withCommand(...command: string[]): this {
+    this.options.wrapperCommand = command;
+    return this;
+  }
+
+  /**
    * Set session ID for continuing an existing conversation
    */
   withSessionId(sessionId: string): this {

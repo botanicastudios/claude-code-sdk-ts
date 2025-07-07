@@ -18,7 +18,7 @@ export class SubprocessCLITransport {
   private options: ClaudeCodeOptions;
   private prompt: string;
   private connectTimeout?: NodeJS.Timeout;
-  private readonly DEFAULT_TIMEOUT = 30000; // 30 seconds
+
   private streamingMode: boolean = false; // Track if we need streaming input capability
   private keepAlive: boolean = false; // Track if we should keep process alive across request-response cycles
 
@@ -299,13 +299,37 @@ export class SubprocessCLITransport {
       CLAUDE_CODE_ENTRYPOINT: 'sdk-ts'
     };
 
-    // Debug: Log the actual command being run
-    if (this.options.debug) {
-      console.error('DEBUG: Running command:', cliPath, args.join(' '));
-    }
-
     try {
-      this.process = execa(cliPath, args, {
+      let executablePath: string;
+      let executableArgs: string[];
+
+      if (
+        this.options.wrapperCommand &&
+        this.options.wrapperCommand.length > 0
+      ) {
+        // Use wrapper command: e.g., ['wsl.exe', 'node'] + cliPath + args
+        executablePath = this.options.wrapperCommand[0]!;
+        executableArgs = [
+          ...this.options.wrapperCommand.slice(1),
+          cliPath,
+          ...args
+        ];
+      } else {
+        // Direct execution: cliPath + args
+        executablePath = cliPath;
+        executableArgs = args;
+      }
+
+      // Debug: Log the actual command being run
+      if (this.options.debug) {
+        console.error(
+          'DEBUG: Running command:',
+          executablePath,
+          executableArgs.join(' ')
+        );
+      }
+
+      this.process = execa(executablePath, executableArgs, {
         env,
         cwd: this.options.cwd,
         stdin: 'pipe',
