@@ -1,6 +1,9 @@
 // Permission modes for Claude Code operations
 export type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions';
 
+// Handler for process completion events
+export type ProcessCompleteHandler = (exitCode: number, error?: Error) => void;
+
 // Tool names that can be allowed or denied
 export type ToolName =
   | 'Read'

@@ -1,11 +1,16 @@
 import { InternalClient } from './_internal/client.js';
-import type { ClaudeCodeOptions, Message } from './types.js';
+import type {
+  ClaudeCodeOptions,
+  Message,
+  ProcessCompleteHandler
+} from './types.js';
 
 /**
  * Query Claude Code with a prompt and options.
  *
  * @param prompt - The prompt to send to Claude Code
  * @param options - Configuration options for the query
+ * @param processCompleteHandlers - Handlers to call when the subprocess terminates
  * @returns An async iterator that yields messages from Claude Code
  *
  * @example
@@ -38,9 +43,15 @@ import type { ClaudeCodeOptions, Message } from './types.js';
  */
 export async function* query(
   prompt: string,
-  options?: ClaudeCodeOptions
+  options?: ClaudeCodeOptions,
+  processCompleteHandlers?: Array<ProcessCompleteHandler>
 ): AsyncGenerator<Message> {
-  const client = new InternalClient(prompt, options);
+  const client = new InternalClient(
+    prompt,
+    options,
+    false,
+    processCompleteHandlers
+  );
   yield* client.processQuery();
 }
 

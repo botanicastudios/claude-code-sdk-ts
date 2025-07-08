@@ -4,7 +4,8 @@ import type {
   Message,
   ToolName,
   PermissionMode,
-  MCPServer
+  MCPServer,
+  ProcessCompleteHandler
 } from './types.js';
 import { ResponseParser } from './parser.js';
 import { Logger } from './logger.js';
@@ -21,6 +22,13 @@ import { Conversation } from './conversation.js';
  *   .skipPermissions()
  *   .withTimeout(30000)
  *   .onMessage(msg => console.log('Got:', msg.type))
+ *   .onProcessComplete((exitCode, error) => {
+ *     if (exitCode === 0) {
+ *       console.log('All processing complete!');
+ *     } else {
+ *       console.log('Processing failed:', error);
+ *     }
+ *   })
  *   .query('Create a README file')
  *   .asText();
  * ```
@@ -28,6 +36,7 @@ import { Conversation } from './conversation.js';
 export class QueryBuilder {
   protected options: ClaudeCodeOptions = {};
   protected messageHandlers: Array<(message: Message) => void> = [];
+  protected processCompleteHandlers: Array<ProcessCompleteHandler> = [];
   protected logger?: Logger;
 
   /**
@@ -198,6 +207,35 @@ export class QueryBuilder {
   }
 
   /**
+   * Add process complete handler - called when the subprocess terminates
+   *
+   * This is useful for knowing when all queued messages have been processed,
+   * especially in streaming scenarios where you might receive result messages
+   * before all input has been fully processed.
+   *
+   * @param handler Function called with (exitCode, error) when process terminates
+   * @returns this QueryBuilder instance for chaining
+   *
+   * @example
+   * ```typescript
+   * await claude()
+   *   .onProcessComplete((exitCode, error) => {
+   *     if (exitCode === 0) {
+   *       console.log('All processing complete!');
+   *     } else {
+   *       console.log('Processing failed:', error);
+   *     }
+   *   })
+   *   .query('Analyze this codebase')
+   *   .asText();
+   * ```
+   */
+  onProcessComplete(handler: ProcessCompleteHandler): this {
+    this.processCompleteHandlers.push(handler);
+    return this;
+  }
+
+  /**
    * Add handler for specific message type
    */
   onAssistant(handler: (content: any) => void): this {
@@ -230,9 +268,10 @@ export class QueryBuilder {
    */
   query(prompt: string): ResponseParser {
     const parser = new ResponseParser(
-      baseQuery(prompt, this.options),
+      baseQuery(prompt, this.options, this.processCompleteHandlers),
       this.messageHandlers,
-      this.logger
+      this.logger,
+      this.processCompleteHandlers
     );
     return parser;
   }

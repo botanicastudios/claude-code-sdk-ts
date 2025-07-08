@@ -4,7 +4,8 @@ import type {
   ClaudeCodeOptions,
   Message,
   TextBlock,
-  UserMessage
+  UserMessage,
+  ProcessCompleteHandler
 } from './types.js';
 import type { Logger } from './logger.js';
 
@@ -33,9 +34,10 @@ class SessionAwareParser extends ResponseParser {
     logger: Logger | undefined,
     private onSessionUpdate: (sessionId: string | null) => void,
     private onMessage: (message: Message) => Promise<void>,
-    private client?: InternalClient
+    private client?: InternalClient,
+    processCompleteHandlers: Array<ProcessCompleteHandler> = []
   ) {
-    super(generator, handlers, logger);
+    super(generator, handlers, logger, processCompleteHandlers);
   }
 
   protected async consume(): Promise<void> {
@@ -148,6 +150,7 @@ export class Conversation {
     (message: Message, sessionId: string | null) => void | Promise<void>
   > = [];
   private sessionIdHandlers: Array<(sessionId: string | null) => void> = [];
+  private processCompleteHandlers: Array<ProcessCompleteHandler> = [];
   private logger?: Logger;
   private disposed = false;
   private _keepAlive: boolean;
@@ -185,8 +188,9 @@ export class Conversation {
         sessionId: this.currentSessionId || undefined,
         keepAlive: this._keepAlive // Pass keepAlive flag to client
       },
-      true
-    ); // Enable streaming mode for conversations
+      true, // Enable streaming mode for conversations
+      this.processCompleteHandlers
+    );
 
     // Store as active client so send() can write to stdin of the same process
     this.activeClient = client;
@@ -200,7 +204,8 @@ export class Conversation {
         this.updateSessionId(newSessionId);
       },
       (message) => this.emitMessage(message),
-      client
+      client,
+      this.processCompleteHandlers
     );
 
     return parser;
@@ -277,7 +282,8 @@ export class Conversation {
             sessionId: this.currentSessionId || undefined,
             keepAlive: this._keepAlive // Pass keepAlive flag to client
           },
-          true // Use streaming mode so subsequent send() calls can write to stdin
+          true, // Use streaming mode so subsequent send() calls can write to stdin
+          this.processCompleteHandlers
         );
 
         // Store as active client so future send() calls can use it
@@ -353,6 +359,49 @@ export class Conversation {
   }
 
   /**
+   * Listen for process completion events
+   * Returns unsubscribe function
+   *
+   * This is useful for knowing when all queued messages have been processed,
+   * especially in streaming scenarios where you might receive result messages
+   * before all input has been fully processed.
+   *
+   * @param handler Function called with (exitCode, error) when process terminates
+   * @returns Unsubscribe function
+   *
+   * @example
+   * ```typescript
+   * const conversation = claude().asConversation();
+   *
+   * conversation.onProcessComplete((exitCode, error) => {
+   *   if (exitCode === 0) {
+   *     console.log('All processing complete!');
+   *   } else {
+   *     console.log('Processing failed:', error);
+   *   }
+   * });
+   *
+   * const parser = conversation.query('Analyze this code');
+   * await parser.asText();
+   * ```
+   */
+  onProcessComplete(handler: ProcessCompleteHandler): () => void {
+    if (this.disposed) {
+      throw new Error('Conversation has been disposed');
+    }
+
+    this.processCompleteHandlers.push(handler);
+
+    // Return unsubscribe function
+    return () => {
+      const index = this.processCompleteHandlers.indexOf(handler);
+      if (index > -1) {
+        this.processCompleteHandlers.splice(index, 1);
+      }
+    };
+  }
+
+  /**
    * Check if the conversation has been disposed
    */
   isDisposed(): boolean {
@@ -400,6 +449,7 @@ export class Conversation {
     // Clear handlers
     this.streamHandlers.length = 0;
     this.sessionIdHandlers.length = 0;
+    this.processCompleteHandlers.length = 0;
 
     this.disposed = true;
   }

@@ -11,6 +11,7 @@ The Claude Code SDK now includes a powerful fluent API that makes it easier to b
 - [Logging Framework](#logging-framework)
 - [Advanced Patterns](#advanced-patterns)
 - [Migration Guide](#migration-guide)
+- [Process Completion Handlers](#process-completion-handlers)
 
 ## Getting Started
 
@@ -486,3 +487,155 @@ if (!success) {
 ```
 
 The fluent API is designed to reduce boilerplate while maintaining the full power of the original API. You can mix and match approaches as needed for your use case.
+
+## Process Completion Handlers
+
+The `onProcessComplete()` method allows you to register handlers that are called when the Claude subprocess terminates. This is particularly useful for:
+
+- **Knowing when all queued messages are processed** - especially important in streaming scenarios
+- **Distinguishing between intermediate and final results** - you can identify when processing is truly complete
+- **Handling process failures** - get notified with exit codes and error details
+- **Resource cleanup** - perform cleanup operations when processing finishes
+
+### Basic Usage
+
+```typescript
+import { claude } from '@anthropic-ai/claude-code-sdk';
+
+// Basic process completion handler
+await claude()
+  .onProcessComplete((exitCode, error) => {
+    if (exitCode === 0) {
+      console.log('All processing completed successfully!');
+    } else {
+      console.log(`Process failed with exit code ${exitCode}:`, error?.message);
+    }
+  })
+  .query('Analyze this codebase')
+  .asText();
+```
+
+### Multiple Handlers
+
+You can register multiple process completion handlers:
+
+```typescript
+await claude()
+  .onProcessComplete((exitCode) => {
+    console.log(`Analytics: Process exited with code ${exitCode}`);
+  })
+  .onProcessComplete((exitCode, error) => {
+    if (error) {
+      logError('Process failed', error);
+    }
+  })
+  .query('Generate documentation')
+  .asText();
+```
+
+### Conversation Usage
+
+Process completion handlers work with conversations too:
+
+```typescript
+const conversation = claude().asConversation();
+
+// Add handler to conversation
+const unsubscribe = conversation.onProcessComplete((exitCode, error) => {
+  if (exitCode === 0) {
+    console.log('Conversation process completed!');
+  } else {
+    console.log('Conversation process failed:', error?.message);
+  }
+});
+
+// Use the conversation
+const parser = conversation.query('Help me debug this code');
+const result = await parser.asText();
+
+// Clean up
+unsubscribe();
+await conversation.dispose();
+```
+
+### Integration with Other Handlers
+
+Process completion handlers work seamlessly with other event handlers:
+
+```typescript
+let messageCount = 0;
+
+await claude()
+  .onMessage((message) => {
+    messageCount++;
+    console.log(`Message ${messageCount}: ${message.type}`);
+  })
+  .onProcessComplete((exitCode) => {
+    console.log(`Processing complete! Total messages: ${messageCount}`);
+  })
+  .query('Create a hello world program')
+  .asText();
+```
+
+### Streaming Scenarios
+
+This feature is especially useful for streaming where you might receive result messages before all input is processed:
+
+```typescript
+let streamingComplete = false;
+
+await claude()
+  .onProcessComplete((exitCode) => {
+    streamingComplete = true;
+    console.log('All streaming input has been processed');
+  })
+  .query('Process this data')
+  .stream((message) => {
+    console.log('Stream:', message.type);
+    // You can check streamingComplete to know if more input is coming
+  });
+```
+
+### Handler Signature
+
+```typescript
+type ProcessCompleteHandler = (exitCode: number, error?: Error) => void;
+```
+
+**Parameters:**
+
+- `exitCode`: The exit code of the subprocess (0 for success, non-zero for failure)
+- `error`: Optional error object if the process failed
+
+### Return Value
+
+The `onProcessComplete()` method returns:
+
+- For `QueryBuilder`: The `QueryBuilder` instance (for chaining)
+- For `Conversation`: An unsubscribe function to remove the handler
+
+### Error Handling
+
+Process completion handlers are called even if the subprocess fails:
+
+```typescript
+await claude()
+  .onProcessComplete((exitCode, error) => {
+    if (exitCode !== 0) {
+      console.error(`Process failed with exit code ${exitCode}`);
+      console.error('Error details:', error?.message);
+      // Handle failure case
+    }
+  })
+  .query('Invalid command that will fail')
+  .asText();
+```
+
+### Notes
+
+- **Non-keepAlive mode**: Handlers are called when the subprocess terminates after processing
+- **KeepAlive mode**: Handler behavior depends on the specific implementation
+- **Exception safety**: If a handler throws an exception, it won't affect other handlers or the main process
+- **Cleanup**: Conversation handlers are automatically cleaned up when the conversation is disposed
+
+This feature solves the common problem of not knowing when all queued messages have been processed, especially useful in streaming scenarios where you might receive result messages before all input is fully processed.

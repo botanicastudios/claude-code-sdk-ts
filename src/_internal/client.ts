@@ -1,5 +1,10 @@
 import { SubprocessCLITransport } from './transport/subprocess-cli.js';
-import type { ClaudeCodeOptions, Message, UserMessage } from '../types.js';
+import type {
+  ClaudeCodeOptions,
+  Message,
+  UserMessage,
+  ProcessCompleteHandler
+} from '../types.js';
 import { ClaudeSDKError } from '../errors.js';
 
 export class InternalClient {
@@ -7,15 +12,18 @@ export class InternalClient {
   private prompt: string;
   private transport?: SubprocessCLITransport;
   private streamingMode: boolean;
+  private processCompleteHandlers: Array<ProcessCompleteHandler>;
 
   constructor(
     prompt: string,
     options: ClaudeCodeOptions = {},
-    streamingMode: boolean = false
+    streamingMode: boolean = false,
+    processCompleteHandlers: Array<ProcessCompleteHandler> = []
   ) {
     this.prompt = prompt;
     this.options = options;
     this.streamingMode = streamingMode;
+    this.processCompleteHandlers = processCompleteHandlers;
   }
 
   /**
@@ -37,7 +45,8 @@ export class InternalClient {
       this.prompt,
       this.options,
       this.streamingMode,
-      this.options.keepAlive
+      this.options.keepAlive,
+      this.processCompleteHandlers
     );
 
     try {

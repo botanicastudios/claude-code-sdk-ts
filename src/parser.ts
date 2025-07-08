@@ -1,4 +1,9 @@
-import type { Message, ToolUseBlock, ResultMessage } from './types.js';
+import type {
+  Message,
+  ToolUseBlock,
+  ResultMessage,
+  ProcessCompleteHandler
+} from './types.js';
 import type { Logger } from './logger.js';
 
 /**
@@ -23,7 +28,8 @@ export class ResponseParser {
   constructor(
     protected generator: AsyncGenerator<Message>,
     protected handlers: Array<(message: Message) => void> = [],
-    protected logger?: Logger
+    protected logger?: Logger,
+    protected processCompleteHandlers: Array<ProcessCompleteHandler> = []
   ) {}
 
   /**

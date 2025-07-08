@@ -11,7 +11,11 @@ import {
   ProcessError,
   CLIJSONDecodeError
 } from '../../errors.js';
-import type { ClaudeCodeOptions, CLIOutput } from '../../types.js';
+import type {
+  ClaudeCodeOptions,
+  CLIOutput,
+  ProcessCompleteHandler
+} from '../../types.js';
 
 export class SubprocessCLITransport {
   private process?: ExecaChildProcess;
@@ -21,17 +25,20 @@ export class SubprocessCLITransport {
 
   private streamingMode: boolean = false; // Track if we need streaming input capability
   private keepAlive: boolean = false; // Track if we should keep process alive across request-response cycles
+  private processCompleteHandlers: Array<ProcessCompleteHandler>;
 
   constructor(
     prompt: string,
     options: ClaudeCodeOptions = {},
     streamingMode: boolean = false,
-    keepAlive: boolean = false
+    keepAlive: boolean = false,
+    processCompleteHandlers: Array<ProcessCompleteHandler> = []
   ) {
     this.prompt = prompt;
     this.options = options;
     this.streamingMode = streamingMode;
     this.keepAlive = keepAlive;
+    this.processCompleteHandlers = processCompleteHandlers;
   }
 
   /**
@@ -487,7 +494,34 @@ export class SubprocessCLITransport {
       // After all messages are processed, wait for process to exit
       try {
         await this.process;
+
+        // Call process complete handlers on successful exit
+        for (const handler of this.processCompleteHandlers) {
+          try {
+            handler(0); // Exit code 0 for success
+          } catch (error) {
+            if (this.options.debug) {
+              console.error('DEBUG: Error in process complete handler:', error);
+            }
+          }
+        }
       } catch (error: any) {
+        const exitCode = error.exitCode ?? 1;
+
+        // Call process complete handlers on error
+        for (const handler of this.processCompleteHandlers) {
+          try {
+            handler(exitCode, error);
+          } catch (handlerError) {
+            if (this.options.debug) {
+              console.error(
+                'DEBUG: Error in process complete handler:',
+                handlerError
+              );
+            }
+          }
+        }
+
         if (error.exitCode !== 0) {
           throw new ProcessError(
             `Claude Code CLI exited with code ${error.exitCode}`,
