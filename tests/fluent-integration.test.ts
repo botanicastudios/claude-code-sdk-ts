@@ -411,7 +411,7 @@ describe('Fluent API Integration Tests', () => {
         .inDirectory('/workspace')
         .withEnv({ NODE_ENV: 'production' })
         // MCP
-        .withMCP({ command: 'mcp-test' })
+        .withMCP({ 'mcp-test': { command: 'mcp-test' } })
         // Logging
         .withLogger(logger)
         // Event handlers
@@ -432,7 +432,7 @@ describe('Fluent API Integration Tests', () => {
         permissionMode: 'acceptEdits',
         cwd: '/workspace',
         env: { NODE_ENV: 'production' },
-        mcpServers: [{ command: 'mcp-test' }]
+        mcpServers: { 'mcp-test': { command: 'mcp-test' } }
       });
     });
   });

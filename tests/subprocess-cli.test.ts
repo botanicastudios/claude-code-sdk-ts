@@ -100,59 +100,37 @@ describe('SubprocessCLITransport', () => {
 
       const options = {
         model: 'claude-3',
-        apiKey: 'test-key',
-        baseUrl: 'https://api.test.com',
-        maxTokens: 1000,
-        temperature: 0.7,
-        timeout: 30000,
-        debug: true,
-        tools: ['Read', 'Write'] as any,
         allowedTools: ['Bash'] as any,
         deniedTools: ['WebSearch'] as any,
-        permissionMode: 'acceptEdits' as any,
-        context: ['file1.txt', 'file2.txt'],
-        mcpServers: [
-          { command: 'server1', args: ['--port', '3000'] },
-          { command: 'server2' }
-        ]
+        permissionMode: 'bypassPermissions' as any,
+        mcpServers: {
+          server1: { command: 'server1', args: ['--port', '3000'] },
+          server2: { command: 'server2' }
+        }
       };
 
       const transport = new SubprocessCLITransport('test prompt', options);
       await transport.connect();
 
       const expectedArgs = [
-        'test prompt',
         '--output-format',
-        'json',
+        'stream-json',
+        '--verbose',
         '--model',
         'claude-3',
-        '--api-key',
-        'test-key',
-        '--base-url',
-        'https://api.test.com',
-        '--max-tokens',
-        '1000',
-        '--temperature',
-        '0.7',
-        '--timeout',
-        '30000',
-        '--debug',
-        '--tools',
-        'Read,Write',
-        '--allowed-tools',
+        '--allowedTools',
         'Bash',
-        '--denied-tools',
+        '--disallowedTools',
         'WebSearch',
-        '--permission-mode',
-        'acceptEdits',
-        '--context',
-        'file1.txt',
-        '--context',
-        'file2.txt',
-        '--mcp-server',
-        'server1 --port 3000',
-        '--mcp-server',
-        'server2'
+        '--dangerously-skip-permissions',
+        '--mcp-config',
+        JSON.stringify({
+          mcpServers: {
+            server1: { command: 'server1', args: ['--port', '3000'] },
+            server2: { command: 'server2' }
+          }
+        }),
+        '--print'
       ];
 
       expect(execa).toHaveBeenCalledWith(

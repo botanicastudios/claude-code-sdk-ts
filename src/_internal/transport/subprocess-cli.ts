@@ -266,7 +266,10 @@ export class SubprocessCLITransport {
     // Note: 'default' and 'acceptEdits' are not supported by current CLI version
 
     // Handle MCP config
-    if (this.options.mcpServers && this.options.mcpServers.length > 0) {
+    if (
+      this.options.mcpServers &&
+      Object.keys(this.options.mcpServers).length > 0
+    ) {
       const mcpConfig = {
         mcpServers: this.options.mcpServers
       };

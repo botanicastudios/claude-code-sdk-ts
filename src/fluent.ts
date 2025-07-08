@@ -3,7 +3,8 @@ import type {
   ClaudeCodeOptions,
   Message,
   ToolName,
-  PermissionMode
+  PermissionMode,
+  MCPServer
 } from './types.js';
 import { ResponseParser } from './parser.js';
 import { Logger } from './logger.js';
@@ -160,8 +161,11 @@ export class QueryBuilder {
   /**
    * Add MCP servers
    */
-  withMCP(...servers: NonNullable<ClaudeCodeOptions['mcpServers']>): this {
-    this.options.mcpServers = [...(this.options.mcpServers || []), ...servers];
+  withMCP(servers: Record<string, MCPServer>): this {
+    if (!this.options.mcpServers) {
+      this.options.mcpServers = {};
+    }
+    this.options.mcpServers = { ...this.options.mcpServers, ...servers };
     return this;
   }
 

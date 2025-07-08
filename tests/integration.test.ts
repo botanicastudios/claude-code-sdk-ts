@@ -178,16 +178,16 @@ describe('Integration Tests', () => {
 
     it('should handle MCP server configuration', async () => {
       const options: ClaudeCodeOptions = {
-        mcpServers: [
-          {
+        mcpServers: {
+          filesystem: {
             command: 'mcp-server-filesystem',
             args: ['--path', '/home/user'],
             env: { DEBUG: 'true' }
           },
-          {
+          git: {
             command: 'mcp-server-git'
           }
-        ]
+        }
       };
 
       mockProcessQuery.mockImplementation(async function* () {

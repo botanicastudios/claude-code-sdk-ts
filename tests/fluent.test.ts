@@ -269,25 +269,65 @@ describe('QueryBuilder', () => {
   });
 
   describe('MCP Servers', () => {
-    it('should add MCP servers', () => {
+    it('should add single MCP server with name', () => {
       mockQuery.mockImplementation(async function* () {
         yield { type: 'result', content: 'done' };
       });
 
       claude()
-        .withMCP(
-          { command: 'mcp-server-1' },
-          { command: 'mcp-server-2', args: ['--flag'] }
-        )
+        .withMCP({ 'server-1': { command: 'mcp-server-1' } })
         .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith(
         'test',
         expect.objectContaining({
-          mcpServers: [
-            { command: 'mcp-server-1' },
-            { command: 'mcp-server-2', args: ['--flag'] }
-          ]
+          mcpServers: {
+            'server-1': { command: 'mcp-server-1' }
+          }
+        })
+      );
+    });
+
+    it('should add multiple MCP servers with names', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude()
+        .withMCP({ 'server-1': { command: 'mcp-server-1' } })
+        .withMCP({ 'server-2': { command: 'mcp-server-2', args: ['--flag'] } })
+        .query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          mcpServers: {
+            'server-1': { command: 'mcp-server-1' },
+            'server-2': { command: 'mcp-server-2', args: ['--flag'] }
+          }
+        })
+      );
+    });
+
+    it('should add multiple MCP servers from object', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude()
+        .withMCP({
+          'server-1': { command: 'mcp-server-1' },
+          'server-2': { command: 'mcp-server-2', args: ['--flag'] }
+        })
+        .query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          mcpServers: {
+            'server-1': { command: 'mcp-server-1' },
+            'server-2': { command: 'mcp-server-2', args: ['--flag'] }
+          }
         })
       );
     });
@@ -298,14 +338,17 @@ describe('QueryBuilder', () => {
       });
 
       claude()
-        .withMCP({ command: 'server1' })
-        .withMCP({ command: 'server2' })
+        .withMCP({ server1: { command: 'server1' } })
+        .withMCP({ server2: { command: 'server2' } })
         .query('test');
 
       expect(mockQuery).toHaveBeenCalledWith(
         'test',
         expect.objectContaining({
-          mcpServers: [{ command: 'server1' }, { command: 'server2' }]
+          mcpServers: {
+            server1: { command: 'server1' },
+            server2: { command: 'server2' }
+          }
         })
       );
     });

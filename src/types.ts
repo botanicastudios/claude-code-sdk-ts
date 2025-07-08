@@ -92,9 +92,11 @@ export type Message =
 
 // MCP server configuration
 export interface MCPServer {
-  command: string;
+  type?: string;
+  command?: string;
   args?: string[];
   env?: Record<string, string>;
+  url?: string;
 }
 
 // Main options interface
@@ -105,7 +107,7 @@ export interface ClaudeCodeOptions {
   tools?: ToolName[];
   allowedTools?: ToolName[];
   deniedTools?: ToolName[];
-  mcpServers?: MCPServer[];
+  mcpServers?: Record<string, MCPServer>;
   permissionMode?: PermissionMode;
   context?: string[];
   maxTokens?: number;
