@@ -53,8 +53,53 @@ vi.mock('../src/_internal/client.js', () => {
 });
 
 describe('onProcessComplete Tests', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+
+    // Reset mock implementation to success case
+    const { InternalClient } = await import('../src/_internal/client.js');
+    vi.mocked(InternalClient).mockImplementation(
+      (prompt, options, streamingMode, processCompleteHandlers) => {
+        // Store handlers to call them later
+        const handlers = processCompleteHandlers || [];
+
+        return {
+          options: options || {},
+          prompt: prompt || '',
+          streamingMode: streamingMode || false,
+          processCompleteHandlers: handlers,
+          async *processQuery() {
+            yield {
+              type: 'assistant',
+              content: [{ type: 'text', text: `Response to: ${prompt}` }],
+              session_id: 'test-session'
+            };
+            yield {
+              type: 'result',
+              content: 'Query completed',
+              session_id: 'test-session'
+            };
+
+            // Simulate process completion after yielding messages
+            setTimeout(() => {
+              handlers.forEach((handler: ProcessCompleteHandler) => {
+                try {
+                  handler(0); // Success exit code
+                } catch (error) {
+                  console.error('Handler error:', error);
+                }
+              });
+            }, 0);
+          },
+          parseMessage: vi.fn(),
+          getTransport: () => undefined,
+          hasActiveTransport: () => false,
+          sendStreamingInput: vi.fn(),
+          closeStdin: vi.fn(),
+          dispose: vi.fn()
+        } as any;
+      }
+    );
   });
 
   describe('QueryBuilder.onProcessComplete', () => {
@@ -79,6 +124,10 @@ describe('onProcessComplete Tests', () => {
           const handlers = processCompleteHandlers || [];
 
           return {
+            options: options || {},
+            prompt: prompt || '',
+            streamingMode: streamingMode || false,
+            processCompleteHandlers: handlers,
             async *processQuery() {
               yield {
                 type: 'result',
@@ -99,9 +148,13 @@ describe('onProcessComplete Tests', () => {
                 });
               }, 0);
             },
+            parseMessage: vi.fn(),
+            getTransport: () => undefined,
             hasActiveTransport: () => false,
+            sendStreamingInput: vi.fn(),
+            closeStdin: vi.fn(),
             dispose: vi.fn()
-          };
+          } as any;
         }
       );
 
@@ -339,6 +392,10 @@ describe('onProcessComplete Tests', () => {
           const handlers = processCompleteHandlers || [];
 
           return {
+            options: options || {},
+            prompt: prompt || '',
+            streamingMode: streamingMode || false,
+            processCompleteHandlers: handlers,
             async *processQuery() {
               yield {
                 type: 'assistant',
@@ -361,9 +418,13 @@ describe('onProcessComplete Tests', () => {
                 });
               }, 0);
             },
+            parseMessage: vi.fn(),
+            getTransport: () => undefined,
             hasActiveTransport: () => false,
+            sendStreamingInput: vi.fn(),
+            closeStdin: vi.fn(),
             dispose: vi.fn()
-          };
+          } as any;
         }
       );
 
@@ -414,6 +475,10 @@ describe('onProcessComplete Tests', () => {
           const handlers = processCompleteHandlers || [];
 
           return {
+            options: options || {},
+            prompt: prompt || '',
+            streamingMode: streamingMode || false,
+            processCompleteHandlers: handlers,
             async *processQuery() {
               // Immediate termination
               setTimeout(() => {
@@ -426,9 +491,13 @@ describe('onProcessComplete Tests', () => {
                 });
               }, 0);
             },
+            parseMessage: vi.fn(),
+            getTransport: () => undefined,
             hasActiveTransport: () => false,
+            sendStreamingInput: vi.fn(),
+            closeStdin: vi.fn(),
             dispose: vi.fn()
-          };
+          } as any;
         }
       );
 

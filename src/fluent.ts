@@ -282,7 +282,12 @@ export class QueryBuilder {
    * @returns Conversation instance for multi-turn dialogue
    */
   asConversation(keepAlive: boolean = false): Conversation {
-    return new Conversation(this.options, this.logger, keepAlive);
+    return new Conversation(
+      this.options,
+      this.logger,
+      keepAlive,
+      this.processCompleteHandlers
+    );
   }
 
   /**
@@ -291,7 +296,11 @@ export class QueryBuilder {
   async *queryRaw(prompt: string): AsyncGenerator<Message> {
     this.logger?.info('Starting query', { prompt, options: this.options });
 
-    for await (const message of baseQuery(prompt, this.options)) {
+    for await (const message of baseQuery(
+      prompt,
+      this.options,
+      this.processCompleteHandlers
+    )) {
       this.logger?.debug('Received message', { type: message.type });
 
       // Run handlers

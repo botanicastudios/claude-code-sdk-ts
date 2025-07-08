@@ -158,12 +158,14 @@ export class Conversation {
   constructor(
     options: ClaudeCodeOptions,
     logger?: Logger,
-    keepAlive: boolean = false
+    keepAlive: boolean = false,
+    processCompleteHandlers: Array<ProcessCompleteHandler> = []
   ) {
     this.options = { ...options };
     this.currentSessionId = options.sessionId || null; // Get from QueryBuilder options
     this.logger = logger;
     this._keepAlive = keepAlive;
+    this.processCompleteHandlers = processCompleteHandlers;
   }
 
   /**
