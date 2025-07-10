@@ -117,6 +117,16 @@ export class InternalClient {
   }
 
   /**
+   * Terminate the process and return a promise that resolves when it exits
+   */
+  async terminate(): Promise<void> {
+    if (this.transport) {
+      await this.transport.terminate();
+      this.transport = undefined;
+    }
+  }
+
+  /**
    * Clean up transport resources
    */
   async dispose(): Promise<void> {

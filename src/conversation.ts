@@ -5,7 +5,9 @@ import type {
   Message,
   TextBlock,
   UserMessage,
-  ProcessCompleteHandler
+  ProcessCompleteHandler,
+  ToolUseBlock,
+  ToolResultBlock
 } from './types.js';
 import type { Logger } from './logger.js';
 
@@ -494,8 +496,9 @@ export class Conversation {
   }
 
   /**
-   * Explicitly end the conversation and close stdin
-   * This allows the active process to exit gracefully
+   * Explicitly end the conversation and terminate the subprocess
+   * If the last message was a tool use, waits for tool response before terminating
+   * Returns a promise that resolves when the process exits
    */
   async end(): Promise<void> {
     if (this.disposed) {
@@ -503,21 +506,92 @@ export class Conversation {
     }
 
     this.logger?.debug(
-      'Ending conversation - closing stdin of active process',
+      'Ending conversation - terminating subprocess',
       {
         hasActiveClient: !!this.activeClient,
         hasActiveTransport: this.activeClient?.hasActiveTransport() ?? false
       }
     );
 
-    if (this.activeClient?.hasActiveTransport()) {
-      this.activeClient.closeStdin();
-      this.logger?.debug('Closed stdin of active process');
-
-      // Clear active client since process will exit
-      this.activeClient = undefined;
-    } else {
-      this.logger?.debug('No active transport to close');
+    if (!this.activeClient?.hasActiveTransport()) {
+      this.logger?.debug('No active transport to terminate');
+      return;
     }
+
+    return new Promise<void>((resolve, reject) => {
+      const pendingToolUseIds = new Set<string>();
+      let hasFoundToolUse = false;
+      let timeoutId: NodeJS.Timeout;
+      
+      const cleanup = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+
+      const terminateProcess = async () => {
+        try {
+          cleanup();
+          unsubscribe();
+          await this.activeClient!.terminate();
+          this.activeClient = undefined;
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      // Set up a message handler to track tool use/response pairs
+      const messageHandler = (message: Message) => {
+        if (message.type === 'assistant' && message.content) {
+          // Check for tool use blocks
+          for (const block of message.content) {
+            if (block.type === 'tool_use') {
+              const toolUseBlock = block as ToolUseBlock;
+              if (toolUseBlock.id) {
+                pendingToolUseIds.add(toolUseBlock.id);
+                hasFoundToolUse = true;
+                this.logger?.debug('Found tool use, waiting for response', {
+                  toolUseId: toolUseBlock.id,
+                  toolName: toolUseBlock.name
+                });
+              }
+            }
+            // Check for tool result blocks
+            else if (block.type === 'tool_result') {
+              const toolResultBlock = block as ToolResultBlock;
+              if (toolResultBlock.tool_use_id && pendingToolUseIds.has(toolResultBlock.tool_use_id)) {
+                pendingToolUseIds.delete(toolResultBlock.tool_use_id);
+                this.logger?.debug('Received tool response', {
+                  toolUseId: toolResultBlock.tool_use_id,
+                  remainingTools: pendingToolUseIds.size
+                });
+                
+                // If no more pending tool uses, we can terminate
+                if (pendingToolUseIds.size === 0) {
+                  this.logger?.debug('All tool responses received, terminating');
+                  terminateProcess();
+                }
+              }
+            }
+          }
+        }
+      };
+
+      // Add temporary handler to monitor messages
+      const unsubscribe = this.stream(messageHandler);
+      
+      // Set up a timeout to prevent hanging indefinitely
+      timeoutId = setTimeout(() => {
+        this.logger?.debug('Timeout waiting for tool responses, terminating anyway');
+        terminateProcess();
+      }, 30000); // 30 second timeout
+
+      // If we don't find any tool use after a brief delay, terminate immediately
+      setTimeout(() => {
+        if (!hasFoundToolUse) {
+          this.logger?.debug('No tool use found, terminating immediately');
+          terminateProcess();
+        }
+      }, 100);
+    });
   }
 }

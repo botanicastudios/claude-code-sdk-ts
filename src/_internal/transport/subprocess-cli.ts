@@ -585,4 +585,40 @@ export class SubprocessCLITransport {
       }
     }
   }
+
+  /**
+   * Terminate the process and return a promise that resolves when it exits
+   */
+  async terminate(): Promise<void> {
+    if (!this.process) {
+      return;
+    }
+
+    return new Promise<void>((resolve) => {
+      const cleanup = () => {
+        this.process = undefined;
+        resolve();
+      };
+
+      // Set up exit handler
+      this.process!.on('exit', cleanup);
+      this.process!.on('error', cleanup);
+
+      // Try graceful termination first
+      if (this.process!.stdin && !this.process!.stdin.destroyed) {
+        try {
+          this.process!.stdin.end();
+        } catch (error) {
+          // Ignore errors when closing stdin
+        }
+      }
+
+      // If process doesn't exit within 1 second, force kill it
+      setTimeout(() => {
+        if (this.process && !this.process.killed) {
+          this.process.cancel();
+        }
+      }, 1000);
+    });
+  }
 }

@@ -8,7 +8,7 @@ vi.mock('../src/_internal/client.js', () => {
   return {
     InternalClient: vi
       .fn()
-      .mockImplementation((prompt: string, options: any) => {
+      .mockImplementation((prompt: string, _options: any) => {
         const mockMessages: Message[] = [
           {
             type: 'assistant',
@@ -31,6 +31,7 @@ vi.mock('../src/_internal/client.js', () => {
           getTransport: () => undefined,
           hasActiveTransport: () => false,
           sendStreamingInput: vi.fn(),
+          terminate: vi.fn().mockResolvedValue(undefined),
           dispose: vi.fn()
         };
       })
@@ -92,7 +93,7 @@ describe('Conversation Integration', () => {
       conversation = claude().asConversation();
 
       let capturedSessionId: string | null = null;
-      conversation.stream((message, sessionId) => {
+      conversation.stream((_, sessionId) => {
         capturedSessionId = sessionId;
       });
 
@@ -272,6 +273,171 @@ describe('Conversation Integration', () => {
 
       // Session ID should be consistent
       expect(conversation.getSessionId()).toBe('mock-session-123');
+    });
+  });
+
+  describe('End Method', () => {
+    it('should end conversation with no active transport', async () => {
+      conversation = claude().asConversation();
+      
+      // Should resolve immediately when no active transport
+      await expect(conversation.end()).resolves.toBeUndefined();
+    });
+
+    it('should handle disposed conversation', async () => {
+      conversation = claude().asConversation();
+      await conversation.dispose();
+      
+      await expect(conversation.end()).rejects.toThrow(
+        'Conversation has been disposed'
+      );
+    });
+
+    it('should terminate process immediately when no tool use found', async () => {
+      const mockClient = {
+        hasActiveTransport: () => true,
+        terminate: vi.fn().mockResolvedValue(undefined),
+      };
+
+      conversation = claude().asConversation();
+      // @ts-ignore - accessing private property for testing
+      conversation.activeClient = mockClient;
+
+      // Mock stream to return unsubscribe function
+      conversation.stream = vi.fn().mockImplementation(() => {
+        return () => {}; // unsubscribe function
+      });
+
+      const endPromise = conversation.end();
+      await expect(endPromise).resolves.toBeUndefined();
+      
+      // Should terminate after brief delay when no tool use found
+      expect(mockClient.terminate).toHaveBeenCalled();
+    });
+
+    it('should wait for tool responses before terminating', async () => {
+      const mockClient = {
+        hasActiveTransport: () => true,
+        terminate: vi.fn().mockResolvedValue(undefined),
+      };
+
+      conversation = claude().asConversation();
+      // @ts-ignore - accessing private property for testing
+      conversation.activeClient = mockClient;
+
+      let messageHandler: any;
+      
+      // Mock stream to capture the message handler
+      conversation.stream = vi.fn().mockImplementation((handler) => {
+        messageHandler = handler;
+        return () => {}; // unsubscribe function
+      });
+
+      const endPromise = conversation.end();
+
+      // Simulate tool use message
+      const toolUseMessage = {
+        type: 'assistant' as const,
+        content: [
+          {
+            type: 'tool_use' as const,
+            id: 'test-tool-use-id',
+            name: 'test-tool',
+            input: {}
+          }
+        ]
+      };
+
+      // Send tool use message
+      setTimeout(() => messageHandler(toolUseMessage), 10);
+
+      // Send corresponding tool result message
+      const toolResultMessage = {
+        type: 'assistant' as const,
+        content: [
+          {
+            type: 'tool_result' as const,
+            tool_use_id: 'test-tool-use-id',
+            content: 'Tool result'
+          }
+        ]
+      };
+
+      setTimeout(() => messageHandler(toolResultMessage), 20);
+
+      await expect(endPromise).resolves.toBeUndefined();
+      expect(mockClient.terminate).toHaveBeenCalled();
+    });
+
+    it('should timeout if tool responses take too long', async () => {
+      const mockClient = {
+        hasActiveTransport: () => true,
+        terminate: vi.fn().mockResolvedValue(undefined),
+      };
+
+      conversation = claude().asConversation();
+      // @ts-ignore - accessing private property for testing
+      conversation.activeClient = mockClient;
+
+      let messageHandler: any;
+      
+      // Mock stream to capture the message handler
+      conversation.stream = vi.fn().mockImplementation((handler) => {
+        messageHandler = handler;
+        return () => {}; // unsubscribe function
+      });
+
+      // Mock timeout to be much shorter for testing
+      const originalSetTimeout = global.setTimeout;
+      global.setTimeout = vi.fn().mockImplementation((fn, ms) => {
+        if (ms === 30000) { // Main timeout
+          return originalSetTimeout(fn, 50); // Reduce to 50ms for testing
+        }
+        return originalSetTimeout(fn, ms);
+      }) as any;
+
+      const endPromise = conversation.end();
+
+      // Simulate tool use message but never send response
+      const toolUseMessage = {
+        type: 'assistant' as const,
+        content: [
+          {
+            type: 'tool_use' as const,
+            id: 'test-tool-use-id',
+            name: 'test-tool',
+            input: {}
+          }
+        ]
+      };
+
+      setTimeout(() => messageHandler(toolUseMessage), 10);
+
+      // Should timeout and terminate
+      await expect(endPromise).resolves.toBeUndefined();
+      expect(mockClient.terminate).toHaveBeenCalled();
+
+      // Restore original setTimeout
+      global.setTimeout = originalSetTimeout;
+    });
+
+    it('should handle terminate errors gracefully', async () => {
+      const mockClient = {
+        hasActiveTransport: () => true,
+        terminate: vi.fn().mockRejectedValue(new Error('Terminate failed')),
+      };
+
+      conversation = claude().asConversation();
+      // @ts-ignore - accessing private property for testing
+      conversation.activeClient = mockClient;
+
+      // Mock stream to return unsubscribe function
+      conversation.stream = vi.fn().mockImplementation(() => {
+        return () => {}; // unsubscribe function
+      });
+
+      const endPromise = conversation.end();
+      await expect(endPromise).rejects.toThrow('Terminate failed');
     });
   });
 });
