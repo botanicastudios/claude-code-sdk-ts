@@ -47,7 +47,7 @@ describe('Integration Tests', () => {
       }
 
       expect(results).toEqual(messages);
-      expect(InternalClient).toHaveBeenCalledWith('Hello, Claude!', undefined);
+      expect(InternalClient).toHaveBeenCalledWith('Hello, Claude!', undefined, false, undefined);
     });
 
     it('should handle tool use', async () => {
@@ -123,7 +123,7 @@ describe('Integration Tests', () => {
         results.push(message);
       }
 
-      expect(InternalClient).toHaveBeenCalledWith('Test with options', options);
+      expect(InternalClient).toHaveBeenCalledWith('Test with options', options, false, undefined);
     });
 
     it('should handle errors during iteration', async () => {
@@ -198,7 +198,7 @@ describe('Integration Tests', () => {
         // Process messages
       }
 
-      expect(InternalClient).toHaveBeenCalledWith('Setup MCP', options);
+      expect(InternalClient).toHaveBeenCalledWith('Setup MCP', options, false, undefined);
     });
 
     it('should handle empty response', async () => {

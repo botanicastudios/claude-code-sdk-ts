@@ -26,6 +26,16 @@ export class InternalClient {
     this.processCompleteHandlers = processCompleteHandlers;
   }
 
+  private debugLog(...args: any[]): void {
+    if (this.options.debug) {
+      if (typeof this.options.debug === 'function') {
+        this.options.debug(...args);
+      } else {
+        console.error(...args);
+      }
+    }
+  }
+
   /**
    * Get the active transport for streaming input
    */
@@ -81,11 +91,10 @@ export class InternalClient {
         ? userMessage.content.substring(0, 50) + '...'
         : '[content blocks]';
 
-    this.options.debug &&
-      console.error(
-        'DEBUG: Sending streaming input to active transport:',
-        messagePreview
-      );
+    this.debugLog(
+      'DEBUG: Sending streaming input to active transport:',
+      messagePreview
+    );
 
     const jsonlMessage = {
       type: 'user',
@@ -95,16 +104,14 @@ export class InternalClient {
       }
     };
 
-    this.options.debug &&
-      console.error(
-        'DEBUG: Writing JSONL to stdin:',
-        JSON.stringify(jsonlMessage).substring(0, 100) + '...'
-      );
+    this.debugLog(
+      'DEBUG: Writing JSONL to stdin:',
+      JSON.stringify(jsonlMessage).substring(0, 100) + '...'
+    );
 
     this.transport.writeToStdin(JSON.stringify(jsonlMessage) + '\n');
 
-    this.options.debug &&
-      console.error('DEBUG: Successfully wrote JSONL message to stdin');
+    this.debugLog('DEBUG: Successfully wrote JSONL message to stdin');
   }
 
   /**
@@ -173,9 +180,13 @@ export class InternalClient {
           content: output.result || '',
           result: output.result || '',
           usage: output.usage,
-          cost: {
-            total_cost: output.total_cost_usd
-          },
+          cost: output.cost ? {
+            input_cost: output.cost.input_cost,
+            output_cost: output.cost.output_cost,
+            cache_creation_cost: output.cost.cache_creation_cost,
+            cache_read_cost: output.cost.cache_read_cost,
+            total_cost: output.cost.total_cost || output.total_cost_usd
+          } : undefined,
           session_id: output.session_id
         };
 

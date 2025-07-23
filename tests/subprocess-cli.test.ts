@@ -412,4 +412,85 @@ describe('SubprocessCLITransport', () => {
       await expect(transport.disconnect()).resolves.not.toThrow();
     });
   });
+
+  describe('Debug Callback Functionality', () => {
+    it('should call debug callback when debug is a function', () => {
+      const debugCallback = vi.fn();
+      const options = { debug: debugCallback };
+      
+      const transport = new SubprocessCLITransport('test prompt', options);
+      
+      // Test debugLog method directly by checking isActive (which calls debugLog)
+      transport.isActive();
+
+      // Verify debug callback was called
+      expect(debugCallback).toHaveBeenCalledWith(
+        'DEBUG: [Transport] isActive() check:',
+        expect.objectContaining({
+          hasProcess: false,
+          result: false
+        })
+      );
+    });
+
+    it('should use console.error when debug is true', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const options = { debug: true };
+      
+      const transport = new SubprocessCLITransport('test prompt', options);
+      
+      // Test debugLog method directly by checking isActive (which calls debugLog)
+      transport.isActive();
+
+      // Verify console.error was called when debug is true
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'DEBUG: [Transport] isActive() check:',
+        expect.objectContaining({
+          hasProcess: false,
+          result: false
+        })
+      );
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should not log anything when debug is false', () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const options = { debug: false };
+      
+      const transport = new SubprocessCLITransport('test prompt', options);
+      
+      // Test debugLog method directly by checking isActive (which calls debugLog)
+      transport.isActive();
+
+      // Verify console.error was not called when debug is false
+      expect(consoleErrorSpy).not.toHaveBeenCalled();
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('should call debug callback with multiple arguments', async () => {
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(execa).mockReturnValue(mockProcess as any);
+
+      const debugCallback = vi.fn();
+      const options = { debug: debugCallback };
+      
+      const transport = new SubprocessCLITransport('test prompt', options);
+      
+      // Check isActive to trigger a debug log with multiple arguments
+      transport.isActive();
+
+      expect(debugCallback).toHaveBeenCalledWith(
+        'DEBUG: [Transport] isActive() check:',
+        expect.objectContaining({
+          hasProcess: false,
+          isKilled: true,
+          hasStdin: false,
+          stdinDestroyed: true,
+          result: false
+        })
+      );
+    });
+  });
 });

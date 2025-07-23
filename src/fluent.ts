@@ -5,7 +5,8 @@ import type {
   ToolName,
   PermissionMode,
   MCPServer,
-  ProcessCompleteHandler
+  ProcessCompleteHandler,
+  DebugCallback
 } from './types.js';
 import { ResponseParser } from './parser.js';
 import { Logger } from './logger.js';
@@ -161,8 +162,9 @@ export class QueryBuilder {
 
   /**
    * Enable debug mode
+   * @param enabled - Boolean to enable/disable debug (uses console.error), or callback function for custom logging
    */
-  debug(enabled = true): this {
+  debug(enabled: boolean | DebugCallback = true): this {
     this.options.debug = enabled;
     return this;
   }

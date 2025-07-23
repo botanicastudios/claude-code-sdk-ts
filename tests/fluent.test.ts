@@ -268,6 +268,73 @@ describe('QueryBuilder', () => {
     });
   });
 
+  describe('Debug Configuration', () => {
+    it('should set debug as boolean true', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().debug(true).query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          debug: true
+        }),
+        []
+      );
+    });
+
+    it('should set debug as boolean false', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().debug(false).query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          debug: false
+        }),
+        []
+      );
+    });
+
+    it('should set debug as callback function', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      const debugCallback = vi.fn();
+      claude().debug(debugCallback).query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          debug: debugCallback
+        }),
+        []
+      );
+    });
+
+    it('should default debug to true when called without arguments', () => {
+      mockQuery.mockImplementation(async function* () {
+        yield { type: 'result', content: 'done' };
+      });
+
+      claude().debug().query('test');
+
+      expect(mockQuery).toHaveBeenCalledWith(
+        'test',
+        expect.objectContaining({
+          debug: true
+        }),
+        []
+      );
+    });
+  });
+
   describe('MCP Servers', () => {
     it('should add single MCP server with name', () => {
       mockQuery.mockImplementation(async function* () {

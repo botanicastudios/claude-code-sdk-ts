@@ -102,6 +102,9 @@ export interface MCPServer {
   url?: string;
 }
 
+// Debug callback function type
+export type DebugCallback = (...args: any[]) => void;
+
 // Main options interface
 export interface ClaudeCodeOptions {
   model?: string;
@@ -121,7 +124,7 @@ export interface ClaudeCodeOptions {
   cwd?: string;
   env?: Record<string, string>;
   timeout?: number;
-  debug?: boolean;
+  debug?: boolean | DebugCallback;
   addDirectories?: string[];
   sessionId?: string;
   keepAlive?: boolean;

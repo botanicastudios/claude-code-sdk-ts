@@ -41,6 +41,16 @@ export class SubprocessCLITransport {
     this.processCompleteHandlers = processCompleteHandlers;
   }
 
+  private debugLog(...args: any[]): void {
+    if (this.options.debug) {
+      if (typeof this.options.debug === 'function') {
+        this.options.debug(...args);
+      } else {
+        console.error(...args);
+      }
+    }
+  }
+
   /**
    * Check if the transport has an active process that can accept streaming input
    */
@@ -59,17 +69,15 @@ export class SubprocessCLITransport {
       !this.process.stdin.destroyed
     );
 
-    if (this.options.debug) {
-      console.error('DEBUG: [Transport] isActive() check:', {
-        hasProcess,
-        isKilled,
-        hasExitCode,
-        exitCode: this.process?.exitCode,
-        hasStdin,
-        stdinDestroyed,
-        result: isActive
-      });
-    }
+    this.debugLog('DEBUG: [Transport] isActive() check:', {
+      hasProcess,
+      isKilled,
+      hasExitCode,
+      exitCode: this.process?.exitCode,
+      hasStdin,
+      stdinDestroyed,
+      result: isActive
+    });
 
     return isActive;
   }
@@ -94,28 +102,22 @@ export class SubprocessCLITransport {
             }
           };
 
-          if (this.options.debug) {
-            console.error(
-              'DEBUG: [Transport] Writing JSONL to process stdin:',
-              JSON.stringify(jsonlMessage).substring(0, 150) + '...'
-            );
-          }
+          this.debugLog(
+            'DEBUG: [Transport] Writing JSONL to process stdin:',
+            JSON.stringify(jsonlMessage).substring(0, 150) + '...'
+          );
 
           this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
 
-          if (this.options.debug) {
-            console.error(
-              'DEBUG: [Transport] Successfully wrote JSONL to stdin'
-            );
-          }
+          this.debugLog(
+            'DEBUG: [Transport] Successfully wrote JSONL to stdin'
+          );
         } else {
           // For non-streaming mode, write as-is (though this shouldn't happen)
-          if (this.options.debug) {
-            console.error(
-              'DEBUG: [Transport] Writing raw data to stdin:',
-              data.substring(0, 100) + '...'
-            );
-          }
+          this.debugLog(
+            'DEBUG: [Transport] Writing raw data to stdin:',
+            data.substring(0, 100) + '...'
+          );
           this.process.stdin.write(data);
         }
       } catch (error) {
@@ -242,7 +244,7 @@ export class SubprocessCLITransport {
 
     // Handle system prompt
     if (this.options.systemPrompt) {
-      args.push('--system-prompt', this.options.systemPrompt);
+      args.push('--system', this.options.systemPrompt);
     }
 
     // Handle append system prompt
@@ -331,13 +333,11 @@ export class SubprocessCLITransport {
       }
 
       // Debug: Log the actual command being run
-      if (this.options.debug) {
-        console.error(
-          'DEBUG: Running command:',
-          executablePath,
-          executableArgs.join(' ')
-        );
-      }
+      this.debugLog(
+        'DEBUG: Running command:',
+        executablePath,
+        executableArgs.join(' ')
+      );
 
       this.process = execa(executablePath, executableArgs, {
         env,
@@ -350,15 +350,11 @@ export class SubprocessCLITransport {
 
       // Set up process error handling
       this.process.on('error', (error) => {
-        if (this.options.debug) {
-          console.error('DEBUG: Process error:', error);
-        }
+        this.debugLog('DEBUG: Process error:', error);
       });
 
       this.process.on('exit', (code, signal) => {
-        if (this.options.debug) {
-          console.error('DEBUG: Process exited:', { code, signal });
-        }
+        this.debugLog('DEBUG: Process exited:', { code, signal });
       });
 
       // Send prompt via stdin
@@ -373,18 +369,16 @@ export class SubprocessCLITransport {
             }
           };
 
-          if (this.options.debug) {
-            console.error(
-              'DEBUG: [Transport] Sending initial JSONL message in streaming mode',
-              {
-                streamingMode: this.streamingMode,
-                keepAlive: this.keepAlive,
-                willKeepStdinOpen: this.keepAlive
-                  ? 'indefinitely until end()'
-                  : 'until result message received'
-              }
-            );
-          }
+          this.debugLog(
+            'DEBUG: [Transport] Sending initial JSONL message in streaming mode',
+            {
+              streamingMode: this.streamingMode,
+              keepAlive: this.keepAlive,
+              willKeepStdinOpen: this.keepAlive
+                ? 'indefinitely until end()'
+                : 'until result message received'
+            }
+          );
 
           this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
           // Keep stdin open for potential streaming input and for keepAlive behavior
@@ -432,15 +426,11 @@ export class SubprocessCLITransport {
       });
 
       stderrRl.on('line', (line) => {
-        if (this.options.debug) {
-          console.error('DEBUG stderr:', line);
-        }
+        this.debugLog('DEBUG stderr:', line);
       });
 
       stderrRl.on('error', (error) => {
-        if (this.options.debug) {
-          console.error('DEBUG stderr error:', error);
-        }
+        this.debugLog('DEBUG stderr error:', error);
       });
     }
 
@@ -455,9 +445,7 @@ export class SubprocessCLITransport {
         const trimmedLine = line.trim();
         if (!trimmedLine) continue;
 
-        if (this.options.debug) {
-          console.error('DEBUG stdout:', trimmedLine);
-        }
+        this.debugLog('DEBUG stdout:', trimmedLine);
 
         try {
           const parsed = JSON.parse(trimmedLine) as CLIOutput;
@@ -470,11 +458,9 @@ export class SubprocessCLITransport {
             this.process?.stdin &&
             !this.process.stdin.destroyed
           ) {
-            if (this.options.debug) {
-              console.error(
-                'DEBUG: [Transport] Received result message, closing stdin for non-keepAlive mode'
-              );
-            }
+            this.debugLog(
+              'DEBUG: [Transport] Received result message, closing stdin for non-keepAlive mode'
+            );
             this.process.stdin.end();
           }
 
@@ -500,9 +486,7 @@ export class SubprocessCLITransport {
           try {
             handler(0); // Exit code 0 for success
           } catch (error) {
-            if (this.options.debug) {
-              console.error('DEBUG: Error in process complete handler:', error);
-            }
+            this.debugLog('DEBUG: Error in process complete handler:', error);
           }
         }
       } catch (error: any) {
@@ -513,12 +497,10 @@ export class SubprocessCLITransport {
           try {
             handler(exitCode, error);
           } catch (handlerError) {
-            if (this.options.debug) {
-              console.error(
-                'DEBUG: Error in process complete handler:',
-                handlerError
-              );
-            }
+            this.debugLog(
+              'DEBUG: Error in process complete handler:',
+              handlerError
+            );
           }
         }
 
@@ -564,9 +546,7 @@ export class SubprocessCLITransport {
         ]);
       } catch (error) {
         // Ignore cleanup errors
-        if (this.options.debug) {
-          console.error('DEBUG: Cleanup error:', error);
-        }
+        this.debugLog('DEBUG: Cleanup error:', error);
       } finally {
         this.process = undefined;
       }

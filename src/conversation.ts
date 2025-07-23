@@ -18,7 +18,7 @@ function normalizeUserContent(
   input: string | TextBlock | TextBlock[]
 ): string | Array<TextBlock | unknown> {
   if (typeof input === 'string') {
-    return [{ type: 'text', text: input }];
+    return input;
   }
   if (Array.isArray(input)) {
     return input;
@@ -146,6 +146,7 @@ class SessionAwareParser extends ResponseParser {
  */
 export class Conversation {
   private activeClient?: InternalClient;
+  private activeParser?: SessionAwareParser;
   private options: ClaudeCodeOptions;
   private currentSessionId: string | null = null;
   private streamHandlers: Array<
@@ -211,6 +212,9 @@ export class Conversation {
       client,
       this.processCompleteHandlers
     );
+
+    // Store as active parser so end() can access already-processed messages
+    this.activeParser = parser;
 
     return parser;
   }
@@ -450,6 +454,9 @@ export class Conversation {
       this.activeClient = undefined;
     }
 
+    // Clean up active parser reference
+    this.activeParser = undefined;
+
     // Clear handlers
     this.streamHandlers.length = 0;
     this.sessionIdHandlers.length = 0;
@@ -505,13 +512,10 @@ export class Conversation {
       throw new Error('Conversation has been disposed');
     }
 
-    this.logger?.debug(
-      'Ending conversation - terminating subprocess',
-      {
-        hasActiveClient: !!this.activeClient,
-        hasActiveTransport: this.activeClient?.hasActiveTransport() ?? false
-      }
-    );
+    this.logger?.debug('Ending conversation - terminating subprocess', {
+      hasActiveClient: !!this.activeClient,
+      hasActiveTransport: this.activeClient?.hasActiveTransport() ?? false
+    });
 
     if (!this.activeClient?.hasActiveTransport()) {
       this.logger?.debug('No active transport to terminate');
@@ -522,7 +526,7 @@ export class Conversation {
       const pendingToolUseIds = new Set<string>();
       let hasFoundToolUse = false;
       let timeoutId: NodeJS.Timeout;
-      
+
       const cleanup = () => {
         if (timeoutId) clearTimeout(timeoutId);
       };
@@ -538,7 +542,82 @@ export class Conversation {
           reject(error);
         }
       };
-      
+
+      // Helper function to check for pending tool uses in messages
+      const checkForPendingToolUses = (messages: Message[]) => {
+        const foundToolUses = new Set<string>();
+        const completedToolUses = new Set<string>();
+
+        for (const message of messages) {
+          if (message.type === 'assistant' && message.content) {
+            for (const block of message.content) {
+              if (block.type === 'tool_use') {
+                const toolUseBlock = block as ToolUseBlock;
+                if (toolUseBlock.id) {
+                  foundToolUses.add(toolUseBlock.id);
+                  this.logger?.debug('Found existing tool use', {
+                    toolUseId: toolUseBlock.id,
+                    toolName: toolUseBlock.name
+                  });
+                }
+              } else if (block.type === 'tool_result') {
+                const toolResultBlock = block as ToolResultBlock;
+                if (toolResultBlock.tool_use_id) {
+                  completedToolUses.add(toolResultBlock.tool_use_id);
+                  this.logger?.debug('Found existing tool result', {
+                    toolUseId: toolResultBlock.tool_use_id
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        // Return only the tool uses that don't have corresponding results
+        const pending = new Set<string>();
+        for (const toolUseId of foundToolUses) {
+          if (!completedToolUses.has(toolUseId)) {
+            pending.add(toolUseId);
+          }
+        }
+
+        return { pending, hasAnyToolUse: foundToolUses.size > 0 };
+      };
+
+      // Check if there's a SessionAwareParser we can get messages from
+      const checkExistingMessages = async () => {
+        if (this.activeParser) {
+          try {
+            // Get the already-processed messages from the active parser
+            const messages = await this.activeParser.asArray();
+            const { pending, hasAnyToolUse } =
+              checkForPendingToolUses(messages);
+
+            this.logger?.debug('Checked existing messages', {
+              totalMessages: messages.length,
+              hasAnyToolUse,
+              pendingToolUses: pending.size
+            });
+
+            // If there are pending tool uses, add them to our tracking
+            if (pending.size > 0) {
+              for (const toolUseId of pending) {
+                pendingToolUseIds.add(toolUseId);
+              }
+              hasFoundToolUse = true;
+              this.logger?.debug(
+                'Found pending tool uses in existing messages',
+                {
+                  pendingToolUseIds: Array.from(pendingToolUseIds)
+                }
+              );
+            }
+          } catch (error) {
+            this.logger?.debug('Could not check existing messages:', { error });
+          }
+        }
+      };
+
       // Set up a message handler to track tool use/response pairs
       const messageHandler = (message: Message) => {
         if (message.type === 'assistant' && message.content) {
@@ -558,16 +637,21 @@ export class Conversation {
             // Check for tool result blocks
             else if (block.type === 'tool_result') {
               const toolResultBlock = block as ToolResultBlock;
-              if (toolResultBlock.tool_use_id && pendingToolUseIds.has(toolResultBlock.tool_use_id)) {
+              if (
+                toolResultBlock.tool_use_id &&
+                pendingToolUseIds.has(toolResultBlock.tool_use_id)
+              ) {
                 pendingToolUseIds.delete(toolResultBlock.tool_use_id);
                 this.logger?.debug('Received tool response', {
                   toolUseId: toolResultBlock.tool_use_id,
                   remainingTools: pendingToolUseIds.size
                 });
-                
+
                 // If no more pending tool uses, we can terminate
                 if (pendingToolUseIds.size === 0) {
-                  this.logger?.debug('All tool responses received, terminating');
+                  this.logger?.debug(
+                    'All tool responses received, terminating'
+                  );
                   terminateProcess();
                 }
               }
@@ -578,20 +662,25 @@ export class Conversation {
 
       // Add temporary handler to monitor messages
       const unsubscribe = this.stream(messageHandler);
-      
+
       // Set up a timeout to prevent hanging indefinitely
       timeoutId = setTimeout(() => {
-        this.logger?.debug('Timeout waiting for tool responses, terminating anyway');
+        this.logger?.debug(
+          'Timeout waiting for tool responses, terminating anyway'
+        );
         terminateProcess();
       }, 30000); // 30 second timeout
 
-      // If we don't find any tool use after a brief delay, terminate immediately
-      setTimeout(() => {
-        if (!hasFoundToolUse) {
-          this.logger?.debug('No tool use found, terminating immediately');
-          terminateProcess();
-        }
-      }, 100);
+      // Check existing messages first
+      checkExistingMessages().then(() => {
+        // If we don't find any tool use after checking existing messages and a brief delay, terminate immediately
+        setTimeout(() => {
+          if (!hasFoundToolUse) {
+            this.logger?.debug('No tool use found, terminating immediately');
+            terminateProcess();
+          }
+        }, 100);
+      });
     });
   }
 }
