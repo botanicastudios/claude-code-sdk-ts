@@ -197,7 +197,7 @@ describe('SubprocessCLITransport', () => {
       );
     });
 
-    it('should include --system flag when systemPrompt is provided', async () => {
+    it('should include --system-prompt flag when systemPrompt is provided', async () => {
       vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
       vi.mocked(execa).mockReturnValue(mockProcess as any);
 
@@ -210,7 +210,10 @@ describe('SubprocessCLITransport', () => {
 
       expect(execa).toHaveBeenCalledWith(
         '/usr/local/bin/claude-code',
-        expect.arrayContaining(['--system', 'You are a helpful assistant.']),
+        expect.arrayContaining([
+          '--system-prompt',
+          'You are a helpful assistant.'
+        ]),
         expect.any(Object)
       );
     });
@@ -254,7 +257,7 @@ describe('SubprocessCLITransport', () => {
         expect.arrayContaining([
           '--max-turns',
           '3',
-          '--system',
+          '--system-prompt',
           'You are a helpful assistant.',
           '--append-system-prompt',
           'Always be concise.'
@@ -417,9 +420,9 @@ describe('SubprocessCLITransport', () => {
     it('should call debug callback when debug is a function', () => {
       const debugCallback = vi.fn();
       const options = { debug: debugCallback };
-      
+
       const transport = new SubprocessCLITransport('test prompt', options);
-      
+
       // Test debugLog method directly by checking isActive (which calls debugLog)
       transport.isActive();
 
@@ -434,11 +437,13 @@ describe('SubprocessCLITransport', () => {
     });
 
     it('should use console.error when debug is true', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const options = { debug: true };
-      
+
       const transport = new SubprocessCLITransport('test prompt', options);
-      
+
       // Test debugLog method directly by checking isActive (which calls debugLog)
       transport.isActive();
 
@@ -455,11 +460,13 @@ describe('SubprocessCLITransport', () => {
     });
 
     it('should not log anything when debug is false', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const options = { debug: false };
-      
+
       const transport = new SubprocessCLITransport('test prompt', options);
-      
+
       // Test debugLog method directly by checking isActive (which calls debugLog)
       transport.isActive();
 
@@ -475,9 +482,9 @@ describe('SubprocessCLITransport', () => {
 
       const debugCallback = vi.fn();
       const options = { debug: debugCallback };
-      
+
       const transport = new SubprocessCLITransport('test prompt', options);
-      
+
       // Check isActive to trigger a debug log with multiple arguments
       transport.isActive();
 

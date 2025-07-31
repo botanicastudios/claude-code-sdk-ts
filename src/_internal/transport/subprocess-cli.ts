@@ -109,9 +109,7 @@ export class SubprocessCLITransport {
 
           this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
 
-          this.debugLog(
-            'DEBUG: [Transport] Successfully wrote JSONL to stdin'
-          );
+          this.debugLog('DEBUG: [Transport] Successfully wrote JSONL to stdin');
         } else {
           // For non-streaming mode, write as-is (though this shouldn't happen)
           this.debugLog(
@@ -244,7 +242,7 @@ export class SubprocessCLITransport {
 
     // Handle system prompt
     if (this.options.systemPrompt) {
-      args.push('--system', this.options.systemPrompt);
+      args.push('--system-prompt', this.options.systemPrompt);
     }
 
     // Handle append system prompt
