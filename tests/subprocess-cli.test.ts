@@ -26,12 +26,17 @@ describe('SubprocessCLITransport', () => {
     const stdinStream = new Readable({ read() {} });
     (stdinStream as any).write = vi.fn();
     (stdinStream as any).end = vi.fn();
+    (stdinStream as any).destroyed = false;
 
     mockProcess = {
       stdout: stdoutStream,
       stderr: new Readable({ read() {} }),
       stdin: stdinStream,
       cancel: vi.fn(),
+      killed: false,
+      exitCode: null,
+      on: vi.fn(),
+      removeListener: vi.fn(),
       then: vi.fn((onfulfilled) => {
         // Simulate successful process completion
         if (onfulfilled) onfulfilled({ exitCode: 0 });
@@ -89,7 +94,7 @@ describe('SubprocessCLITransport', () => {
 
       expect(execa).toHaveBeenCalledWith(
         '/usr/local/bin/claude-code',
-        ['test prompt', '--output-format', 'json'],
+        ['--output-format', 'stream-json', '--verbose', '--print'],
         expect.any(Object)
       );
     });
@@ -352,7 +357,8 @@ describe('SubprocessCLITransport', () => {
       await transport.connect();
 
       setTimeout(() => {
-        stdoutStream.push('invalid json\n');
+        // Push invalid JSON that looks like JSON (starts with {) to trigger the error
+        stdoutStream.push('{"invalid": json}');
         stdoutStream.push(null);
       }, 10);
 
@@ -395,6 +401,94 @@ describe('SubprocessCLITransport', () => {
     it('should throw ProcessError on non-zero exit code', async () => {
       // Skip this test for now - it's complex to test async stream + promise rejection timing
       // The actual functionality is tested in integration tests
+    });
+
+    it('should handle large JSON responses exceeding 8000 bytes', async () => {
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(execa).mockReturnValue(mockProcess as any);
+
+      const transport = new SubprocessCLITransport('test prompt');
+      await transport.connect();
+
+      // Create a large JSON object that exceeds 8000 bytes
+      const largeContent = 'A'.repeat(8500); // Create content > 8000 bytes
+      const largeMessage = {
+        type: 'message',
+        data: {
+          type: 'assistant',
+          content: [{ type: 'text', text: largeContent }]
+        }
+      };
+
+      const largeJsonString = JSON.stringify(largeMessage);
+      expect(largeJsonString.length).toBeGreaterThan(8000); // Verify it's actually large
+
+      const messages = [largeMessage, { type: 'end' }];
+
+      // Emit the large JSON message to stdout
+      setTimeout(() => {
+        // Send the large JSON as a single chunk (no newlines, simulating the truncation scenario)
+        stdoutStream.push(largeJsonString);
+        stdoutStream.push(JSON.stringify({ type: 'end' }));
+        stdoutStream.push(null); // End stream
+      }, 10);
+
+      const received = [];
+      for await (const msg of transport.receiveMessages()) {
+        received.push(msg);
+      }
+
+      expect(received).toHaveLength(2);
+      expect(received[0]).toEqual(largeMessage);
+      expect(received[1]).toEqual({ type: 'end' });
+
+      // Verify the large content was received intact
+      expect((received[0] as any).data.content[0].text).toEqual(largeContent);
+      expect((received[0] as any).data.content[0].text.length).toBe(8500);
+    });
+
+    it('should handle JSON responses split across multiple data chunks', async () => {
+      vi.mocked(which as any).mockResolvedValue('/usr/local/bin/claude-code');
+      vi.mocked(execa).mockReturnValue(mockProcess as any);
+
+      const transport = new SubprocessCLITransport('test prompt');
+      await transport.connect();
+
+      // Create a large JSON that will be split across chunks
+      const largeContent = 'B'.repeat(9000);
+      const largeMessage = {
+        type: 'message',
+        data: {
+          type: 'assistant',
+          content: [{ type: 'text', text: largeContent }]
+        }
+      };
+
+      const largeJsonString = JSON.stringify(largeMessage);
+      const midpoint = Math.floor(largeJsonString.length / 2);
+
+      // Split the JSON into two chunks to simulate data arriving in parts
+      const chunk1 = largeJsonString.substring(0, midpoint);
+      const chunk2 = largeJsonString.substring(midpoint);
+
+      setTimeout(() => {
+        // Send JSON split across multiple chunks
+        stdoutStream.push(chunk1);
+        setTimeout(() => {
+          stdoutStream.push(chunk2);
+          stdoutStream.push(JSON.stringify({ type: 'end' }));
+          stdoutStream.push(null);
+        }, 5);
+      }, 10);
+
+      const received = [];
+      for await (const msg of transport.receiveMessages()) {
+        received.push(msg);
+      }
+
+      expect(received).toHaveLength(2);
+      expect(received[0]).toEqual(largeMessage);
+      expect((received[0] as any).data.content[0].text.length).toBe(9000);
     });
   });
 

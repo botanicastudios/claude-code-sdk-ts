@@ -432,47 +432,161 @@ export class SubprocessCLITransport {
       });
     }
 
-    const rl = createInterface({
-      input: this.process.stdout,
-      crlfDelay: Infinity
-    });
-
     try {
-      // Process stream-json format - each line is a JSON object
-      for await (const line of rl) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine) continue;
+      // Handle large JSON responses that may exceed readline buffer limits
+      // by manually parsing JSON from raw data instead of relying on line-by-line reading
+      let buffer = '';
+      const messages: CLIOutput[] = [];
+      let processComplete = false;
+      let parseError: Error | null = null;
 
-        this.debugLog('DEBUG stdout:', trimmedLine);
+      // Set up data handler for manual JSON parsing
+      const onData = (chunk: Buffer) => {
+        buffer += chunk.toString();
 
-        try {
-          const parsed = JSON.parse(trimmedLine) as CLIOutput;
+        // Try to parse complete JSON objects from the buffer
+        let startIndex = 0;
+        while (startIndex < buffer.length) {
+          const openBrace = buffer.indexOf('{', startIndex);
+          const openBracket = buffer.indexOf('[', startIndex);
 
-          // For non-keepAlive mode, close stdin when we receive a result message
-          // This allows the CLI process to exit gracefully after completing the response
-          if (
-            !this.keepAlive &&
-            (parsed as any).type === 'result' &&
-            this.process?.stdin &&
-            !this.process.stdin.destroyed
-          ) {
+          // Find the first JSON object/array start
+          let jsonStart = -1;
+          if (openBrace !== -1 && openBracket !== -1) {
+            jsonStart = Math.min(openBrace, openBracket);
+          } else if (openBrace !== -1) {
+            jsonStart = openBrace;
+          } else if (openBracket !== -1) {
+            jsonStart = openBracket;
+          }
+
+          if (jsonStart === -1) break;
+
+          // Try to parse JSON starting from this position
+          let depth = 0;
+          let inString = false;
+          let escaped = false;
+          let jsonEnd = -1;
+
+          for (let i = jsonStart; i < buffer.length; i++) {
+            const char = buffer[i];
+
+            if (escaped) {
+              escaped = false;
+              continue;
+            }
+
+            if (char === '\\') {
+              escaped = true;
+              continue;
+            }
+
+            if (char === '"') {
+              inString = !inString;
+              continue;
+            }
+
+            if (!inString) {
+              if (char === '{' || char === '[') {
+                depth++;
+              } else if (char === '}' || char === ']') {
+                depth--;
+                if (depth === 0) {
+                  jsonEnd = i + 1;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (jsonEnd !== -1) {
+            // Found complete JSON object
+            const jsonStr = buffer.substring(jsonStart, jsonEnd);
+
             this.debugLog(
-              'DEBUG: [Transport] Received result message, closing stdin for non-keepAlive mode'
+              'DEBUG stdout:',
+              jsonStr.substring(0, 200) + (jsonStr.length > 200 ? '...' : '')
             );
-            this.process.stdin.end();
-          }
 
-          yield parsed;
-        } catch (error) {
-          // Skip non-JSON lines (like Python SDK does)
-          if (trimmedLine.startsWith('{') || trimmedLine.startsWith('[')) {
-            throw new CLIJSONDecodeError(
-              `Failed to parse CLI output: ${error}`,
-              trimmedLine
-            );
+            try {
+              const parsed = JSON.parse(jsonStr) as CLIOutput;
+
+              // For non-keepAlive mode, close stdin when we receive a result message
+              if (
+                !this.keepAlive &&
+                (parsed as any).type === 'result' &&
+                this.process?.stdin &&
+                !this.process.stdin.destroyed
+              ) {
+                this.debugLog(
+                  'DEBUG: [Transport] Received result message, closing stdin for non-keepAlive mode'
+                );
+                this.process.stdin.end();
+              }
+
+              messages.push(parsed);
+            } catch (error) {
+              // If JSON parsing fails but it looks like JSON, capture error
+              if (
+                jsonStr.trim().startsWith('{') ||
+                jsonStr.trim().startsWith('[')
+              ) {
+                parseError = new CLIJSONDecodeError(
+                  `Failed to parse CLI output: ${error}`,
+                  jsonStr
+                );
+                return; // Stop processing more data
+              }
+              this.debugLog(
+                'DEBUG: Skipping non-JSON data:',
+                jsonStr.substring(0, 100)
+              );
+            }
+
+            // Remove processed JSON from buffer
+            buffer = buffer.substring(jsonEnd);
+            startIndex = 0;
+          } else {
+            // No complete JSON found, wait for more data
+            break;
           }
-          continue;
         }
+      };
+
+      const onEnd = () => {
+        processComplete = true;
+      };
+
+      this.process.stdout.on('data', onData);
+      this.process.stdout.on('end', onEnd);
+
+      // Yield messages as they become available
+      let messageIndex = 0;
+      while (!processComplete || messageIndex < messages.length) {
+        // Check for parse errors first
+        if (parseError) {
+          throw parseError;
+        }
+
+        if (messageIndex < messages.length) {
+          const message = messages[messageIndex];
+          if (message) {
+            yield message;
+          }
+          messageIndex++;
+        } else {
+          // Wait a bit for more messages
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+
+      // Clean up event listeners
+      this.process.stdout.removeListener('data', onData);
+      this.process.stdout.removeListener('end', onEnd);
+
+      // Final check for parse errors
+      if (parseError) {
+        throw parseError;
       }
 
       // After all messages are processed, wait for process to exit
@@ -514,8 +628,6 @@ export class SubprocessCLITransport {
       // Ensure cleanup on any error
       await this.cleanup();
       throw error;
-    } finally {
-      rl.close();
     }
   }
 
