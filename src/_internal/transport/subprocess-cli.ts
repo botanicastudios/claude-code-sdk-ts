@@ -102,12 +102,18 @@ export class SubprocessCLITransport {
             }
           };
 
+          const jsonlString = JSON.stringify(jsonlMessage) + '\n';
+          
           this.debugLog(
             'DEBUG: [Transport] Writing JSONL to process stdin:',
             JSON.stringify(jsonlMessage).substring(0, 150) + '...'
           );
 
-          this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
+          if (this.options.debug) {
+            this.debugLog('DEBUG stdin (raw):', jsonlString);
+          }
+
+          this.process.stdin.write(jsonlString);
 
           this.debugLog('DEBUG: [Transport] Successfully wrote JSONL to stdin');
         } else {
@@ -116,6 +122,11 @@ export class SubprocessCLITransport {
             'DEBUG: [Transport] Writing raw data to stdin:',
             data.substring(0, 100) + '...'
           );
+          
+          if (this.options.debug) {
+            this.debugLog('DEBUG stdin (raw):', data);
+          }
+          
           this.process.stdin.write(data);
         }
       } catch (error) {
@@ -355,6 +366,20 @@ export class SubprocessCLITransport {
         this.debugLog('DEBUG: Process exited:', { code, signal });
       });
 
+      // Log all stderr output when debug is enabled
+      if (this.process.stderr && this.options.debug) {
+        this.process.stderr.on('data', (chunk: Buffer) => {
+          this.debugLog('DEBUG stderr (raw):', chunk.toString());
+        });
+      }
+
+      // Log all stdout output when debug is enabled
+      if (this.process.stdout && this.options.debug) {
+        this.process.stdout.on('data', (chunk: Buffer) => {
+          this.debugLog('DEBUG stdout (raw):', chunk.toString());
+        });
+      }
+
       // Send prompt via stdin
       if (this.process.stdin) {
         if (this.streamingMode) {
@@ -367,6 +392,8 @@ export class SubprocessCLITransport {
             }
           };
 
+          const initialJsonlString = JSON.stringify(jsonlMessage) + '\n';
+          
           this.debugLog(
             'DEBUG: [Transport] Sending initial JSONL message in streaming mode',
             {
@@ -378,12 +405,22 @@ export class SubprocessCLITransport {
             }
           );
 
-          this.process.stdin.write(JSON.stringify(jsonlMessage) + '\n');
+          if (this.options.debug) {
+            this.debugLog('DEBUG stdin (raw):', initialJsonlString);
+          }
+
+          this.process.stdin.write(initialJsonlString);
           // Keep stdin open for potential streaming input and for keepAlive behavior
           // stdin will be closed when we receive a result message (if keepAlive=false) or explicitly via end()
         } else {
           // For simple queries, send as plain text and close stdin
-          this.process.stdin.write(this.prompt + '\n');
+          const promptString = this.prompt + '\n';
+          
+          if (this.options.debug) {
+            this.debugLog('DEBUG stdin (raw):', promptString);
+          }
+          
+          this.process.stdin.write(promptString);
           this.process.stdin.end();
         }
       }

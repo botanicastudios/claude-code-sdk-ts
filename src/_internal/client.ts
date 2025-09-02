@@ -104,12 +104,18 @@ export class InternalClient {
       }
     };
 
+    const jsonlString = JSON.stringify(jsonlMessage) + '\n';
+    
     this.debugLog(
       'DEBUG: Writing JSONL to stdin:',
       JSON.stringify(jsonlMessage).substring(0, 100) + '...'
     );
 
-    this.transport.writeToStdin(JSON.stringify(jsonlMessage) + '\n');
+    if (this.options.debug) {
+      this.debugLog('DEBUG stdin (raw):', jsonlString);
+    }
+
+    this.transport.writeToStdin(jsonlString);
 
     this.debugLog('DEBUG: Successfully wrote JSONL message to stdin');
   }
