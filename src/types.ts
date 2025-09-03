@@ -21,6 +21,9 @@ export type ToolName =
   | 'TodoWrite'
   | 'WebSearch'
   | 'Task'
+  | 'ExitPlanMode'
+  | 'KillBash'
+  | 'BashOutput'
   | 'MCPTool';
 
 // Content block types
