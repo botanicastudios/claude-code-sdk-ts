@@ -14,7 +14,8 @@ import {
 import type {
   ClaudeCodeOptions,
   CLIOutput,
-  ProcessCompleteHandler
+  ProcessCompleteHandler,
+  UserMessage
 } from '../../types.js';
 
 export class SubprocessCLITransport {
@@ -85,25 +86,26 @@ export class SubprocessCLITransport {
   /**
    * Write streaming input to the active process stdin
    */
-  writeToStdin(data: string): void {
+  writeToStdin(userMessage: UserMessage): void {
     if (!this.isActive()) {
       throw new Error('No active process to write to');
     }
 
     if (this.process && this.process.stdin) {
       try {
+        const content = userMessage.content as string;
         if (this.streamingMode) {
           // For streaming mode, wrap message in JSONL format
           const jsonlMessage = {
             type: 'user',
             message: {
               role: 'user',
-              content: [{ type: 'text', text: data }]
+              content: [{ type: 'text', text: content }]
             }
           };
 
           const jsonlString = JSON.stringify(jsonlMessage) + '\n';
-          
+
           this.debugLog(
             'DEBUG: [Transport] Writing JSONL to process stdin:',
             JSON.stringify(jsonlMessage).substring(0, 150) + '...'
@@ -120,14 +122,14 @@ export class SubprocessCLITransport {
           // For non-streaming mode, write as-is (though this shouldn't happen)
           this.debugLog(
             'DEBUG: [Transport] Writing raw data to stdin:',
-            data.substring(0, 100) + '...'
+            content.substring(0, 100) + '...'
           );
-          
+
           if (this.options.debug) {
-            this.debugLog('DEBUG stdin (raw):', data);
+            this.debugLog('DEBUG stdin (raw):', content);
           }
-          
-          this.process.stdin.write(data);
+
+          this.process.stdin.write(content);
         }
       } catch (error) {
         throw new Error(`Failed to write to stdin: ${error}`);
@@ -393,7 +395,7 @@ export class SubprocessCLITransport {
           };
 
           const initialJsonlString = JSON.stringify(jsonlMessage) + '\n';
-          
+
           this.debugLog(
             'DEBUG: [Transport] Sending initial JSONL message in streaming mode',
             {
@@ -415,11 +417,11 @@ export class SubprocessCLITransport {
         } else {
           // For simple queries, send as plain text and close stdin
           const promptString = this.prompt + '\n';
-          
+
           if (this.options.debug) {
             this.debugLog('DEBUG stdin (raw):', promptString);
           }
-          
+
           this.process.stdin.write(promptString);
           this.process.stdin.end();
         }

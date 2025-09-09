@@ -86,36 +86,7 @@ export class InternalClient {
       throw new Error('No active transport for streaming input');
     }
 
-    const messagePreview =
-      typeof userMessage.content === 'string'
-        ? userMessage.content.substring(0, 50) + '...'
-        : '[content blocks]';
-
-    this.debugLog(
-      'DEBUG: Sending streaming input to active transport:',
-      messagePreview
-    );
-
-    const jsonlMessage = {
-      type: 'user',
-      message: {
-        role: 'user',
-        content: userMessage.content
-      }
-    };
-
-    const jsonlString = JSON.stringify(jsonlMessage) + '\n';
-    
-    this.debugLog(
-      'DEBUG: Writing JSONL to stdin:',
-      JSON.stringify(jsonlMessage).substring(0, 100) + '...'
-    );
-
-    if (this.options.debug) {
-      this.debugLog('DEBUG stdin (raw):', jsonlString);
-    }
-
-    this.transport.writeToStdin(jsonlString);
+    this.transport.writeToStdin(userMessage);
 
     this.debugLog('DEBUG: Successfully wrote JSONL message to stdin');
   }
@@ -186,13 +157,15 @@ export class InternalClient {
           content: output.result || '',
           result: output.result || '',
           usage: output.usage,
-          cost: output.cost ? {
-            input_cost: output.cost.input_cost,
-            output_cost: output.cost.output_cost,
-            cache_creation_cost: output.cost.cache_creation_cost,
-            cache_read_cost: output.cost.cache_read_cost,
-            total_cost: output.cost.total_cost || output.total_cost_usd
-          } : undefined,
+          cost: output.cost
+            ? {
+                input_cost: output.cost.input_cost,
+                output_cost: output.cost.output_cost,
+                cache_creation_cost: output.cost.cache_creation_cost,
+                cache_read_cost: output.cost.cache_read_cost,
+                total_cost: output.cost.total_cost || output.total_cost_usd
+              }
+            : undefined,
           session_id: output.session_id
         };
 
