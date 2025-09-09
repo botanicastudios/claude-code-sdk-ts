@@ -93,14 +93,13 @@ export class SubprocessCLITransport {
 
     if (this.process && this.process.stdin) {
       try {
-        const content = userMessage.content as string;
         if (this.streamingMode) {
           // For streaming mode, wrap message in JSONL format
           const jsonlMessage = {
             type: 'user',
             message: {
               role: 'user',
-              content: [{ type: 'text', text: content }]
+              content: userMessage.content
             }
           };
 
@@ -119,6 +118,7 @@ export class SubprocessCLITransport {
 
           this.debugLog('DEBUG: [Transport] Successfully wrote JSONL to stdin');
         } else {
+          const content = userMessage.content as string;
           // For non-streaming mode, write as-is (though this shouldn't happen)
           this.debugLog(
             'DEBUG: [Transport] Writing raw data to stdin:',
